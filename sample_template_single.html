@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>{resource_title}</title>
+	<meta content="width=device-width, initial-scale=1" name="viewport">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.3/jquery.min.js">
+	</script>
+	<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+	<link href="{theme_folder_url}learning_tools_integration/css/bootstrap-select.min.css" rel="stylesheet">
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js">
+	</script>
+	<script src="{theme_folder_url}learning_tools_integration/js/bootstrap-select.min.js">
+	</script>
+	<script src="{theme_folder_url}learning_tools_integration/js/bootbox.min.js"></script>
+</head>
+
+<body>
+<style>
+				body {
+					font-family: 'verdana',Arial,Helvetica,sans-serif;
+				}
+							 .peer_comments {
+										font-size: 14pt;
+										padding: 0.8em;
+							 }
+				 h1, h2, h3, .baklink {
+					text-align: center;
+				 }
+							 .peer_comments > p{
+										font-family: "Courier New", courier, mono-space;
+					text-align: center;
+							 }
+							 .peer_grades {
+
+							 }
+							 .score_spacer {
+										width: 55px;
+										min-width: 55px;
+										display: inline-block;
+							 }
+							 .help_link {
+										padding-top: 1.4em;
+							 }
+
+</style>
+	<div class='container-fluid'>
+		<div class='row'>
+				{if lti_has_error}
+				<div class='col-xs-12 col-sm-12 well col-xs-offset-0 col-sm-offset-0 col-lg-offset-0'>
+							{if lti_has_error == "session expired"}
+									<p>Your session has expired, please return to the course and click the link again.</p>
+							{if:else}
+									<p>{lti_has_error}</p>
+							{/if}
+				</div>
+				{/if}
+
+	{exp:learning_tools_integration
+		prev_link_url='//localhost:9876/images/ci/ng/small_previous.gif' next_link_url='//uonline.newcastle.edu.au/images/ci/ng/small_next.gif' 		 	first_link_url='//uonline.newcastle.edu.au/images/ci/ng/small_rewind.gif' last_link_url='//uonline.newcastle.edu.au/images/ci/ng/small_ffwd.gif' 		plugins='lti_peer_assessment'} <!-- {css_link_tags} --> <!-- imported from LMS -->
+	{if error_messages != ""} {error_messages} {/if}
+	{if logged_in_username}
+
+			<div class='col-xs-12 col-sm-12 well col-xs-offset-0 col-sm-offset-0 col-lg-offset-0'>
+				<h1>{resource_title}</h1>
+
+
+				<p>{resource_link_description}</p>
+
+
+				<p><span class='warningMsg'>{general_message}</span>
+				</p>
+
+
+				<p class='baklink'><a href='{launch_presentation_return_url}'>Return to course: {course_name}</a>
+				</p>
+			</div>
+		</div>
+		{if is_instructor == 1}
+
+		<div class='row'>
+			{if group_id == 1}
+			<div class='col-xs-12 col-sm-3 col-md-3 col-xs-offset-0 col-sm-offset-1 col-md-offset-1 well'>
+				<h2>General Settings</h2>
+
+
+				<div id='admin'>
+					<h3>Group import &amp; Plugin settings</h3>
+					{general_settings_form}
+				</div>
+
+			</div>
+			{/if}
+
+			<div class='col-xs-12 col-sm-8 col-md-6 col-xs-offset-0 col-sm-offset-1 col-md-offset-1 well'>
+				<h1>Students registered for Peer Evaluation</h1>
+				<!--style='display: inline-block'-->
+				{student_table}
+			</div>
+		</div>
+
+
+		<div class='row'>
+			<div class='col-xs-12 col-sm-4 col-xs-offset-0 col-sm-offset-1 well'>
+				<h3>Download Evaluations</h3>
+
+
+				<h4><em>Download Evaluations as Excel Spreadsheet</em></h4>
+        <p>This spreadsheet contains a detailed breakdown of each peer assessment
+          and how marks for each rubric criteria (if specified) were distributed.</p>
+				{exp:lti_peer_assessment:download_excel}
+
+        <h4><em>Download Evaluations as a simple CSV</em></h4>
+        <p>This is a basic option formatted in rows in a CSV.</p>
+				{exp:lti_peer_assessment:download_csv}
+			</div>
+
+
+			<div class='col-xs-12 col-sm-4 col-md-4 col-xs-offset-0 col-sm-offset-1 col-md-offset-1 well'>
+				<h3>Give Students Access to Peer Evaluation {exp:lti_peer_assessment:help_link section='instructors' sub_section='manual_gradebook_upload' class='contextual_help_inline'}</h3>
+				{upload_student_list}
+			</div>
+		</div>
+	</div>
+
+
+	<div class='row'>
+		<div class='col-xs-12 col-sm-4 col-xs-offset-0 col-sm-offset-1 well'>
+			<h3>Configure the Student View {exp:lti_peer_assessment:help_link section='instructors' sub_section='student_view' class='contextual_help_inline'}</h3>
+			{exp:lti_peer_assessment:settings radio_labels='Yes: ,No: '} {form_open} {if group_id == '1'}
+
+			<div class='well'>
+				<h4>Admin Permissions</h4>
+
+
+				<p>Instructors that can view Settings and Download assessment results<br>
+				{instructors_dropdown}</p>
+			</div>
+			{/if}
+
+			<div class='well'>
+				<p>Score calculation algorithm: {score_calculation_dropdown}</p>
+
+
+				<p><br>
+				<a href='//sparkplus.com.au/factors/#spa-sapa-header' target='_blank'>Further information on SPARK SPA and SAPA algorithms (Willey, K)</a>
+				</p>
+			</div>
+
+
+			<div class='well'>
+				<p>Students can view others' grades.<br>
+				{show_grade_column} <label for='show_grade_column'>{label} {radio}</label> {/show_grade_column}</p>
+
+
+				<p>Students can view others' comments.<br>
+				{show_comments} <label for='show_comments'>{label} {radio}</label> {/show_comments}</p>
+
+
+				<p>Students can see SAPA comparison.<br>
+				{show_sapa} <label for='show_sapa'>{label} {radio}</label> {/show_sapa}</p>
+			</div>
+
+
+			<div class='well'>
+				<p>Students assess themselves as well as the group (self assessment).<br>
+				<em>This option sets the first user in the list to the logged in student, all other students are greyed out until the student has self assessed</em><br>
+				{allow_self_assessment} <label for='show_sapa'>{label} {radio}</label> {/allow_self_assessment}</p>
+			</div>
+
+
+			<div class='well'>
+				<p>Self score is included in the mean calculation for the group.<br>
+				<em>This option includes the student's self assessment score in the mean calculation from the group score.</em><br>
+				{include_self_in_mean_score} <label for='include_self_in_mean_score'>{label} {radio}</label> {/include_self_in_mean_score}</p>
+			</div>
+
+
+			<div class='well'>
+				<p>Total maximum score for assessment.<br>
+				<label for='total_score'>Total maximum score for assessment {total_score}</label></p>
+			</div>
+
+
+			<div class='well'>
+				<p>{submit_button}</p>
+			</div>
+			{form_close}
+			<script type='text/javascript'>
+			                          {settings_javascript}
+			</script> {/exp:lti_peer_assessment:settings}
+		</div>
+
+
+		<div class='col-xs-12 col-sm-4 col-md-5 col-xs-offset-0 col-sm-offset-1 col-md-offset-1 well'>
+			<h3>Blackboard Rubrics</h3>
+
+			<p>Upload rubrics here for this course, attached rubrics will be used by students to grade their peers.</p>
+
+			<p><em>To create and export a rubric from Blackboard, go to <strong>Organisation Tools &rarr; Rubrics</strong>.</em>
+			</p>
+
+			<h4>Upload a rubric {exp:lti_peer_assessment:help_link section='instructors' sub_section='rubric' class='contextual_help_inline'}</h4>
+			{upload_blackboard_rubric}
+		</div>
+	</div>
+	{if:else}
+
+	<div class='row'>
+		<div class='col-xs-12 col-sm-12 col-lg-12'>
+			<h1>{exp:lti_peer_assessment:group_name}</h1>
+		</div>
+	</div>
+
+
+	<div class='row'>
+
+		{exp:lti_peer_assessment:feedback type='single'}
+
+		{if user_has_assessed}
+		{if total > 0}
+		<div class='col-xs-12 col-md-6 col-lg-6 peer_grades well col-md-offset-1 col-xs-offset-0 col-lg-offset-1'>
+			{if message}
+
+			<p>{message}</p>
+			{if:else}
+
+
+			<h2>How your group rates you.</h2>
+
+
+			<table class='table table-striped'>
+				<thead>
+					<tr>
+						<th>Criteria</th>
+
+						<th>Average Grade<br>
+						<span id='percToggle'>View as Percentage</span></th>
+					</tr>
+				</thead>
+
+
+				<tbody>
+				{criteria_rows}
+					<tr>
+						<th>{criteria}</th>
+
+						<td>{mean} / {max}</td>
+					</tr>
+				{/criteria_rows}
+				</tbody>
+
+
+				<tfoot>
+					<tr class='total'>
+						<th>Total Mean Score</th>
+
+						<td>{total} / {total_max}</td>
+					</tr>
+				</tfoot>
+			</table>
+
+		</div>
+		{/if}
+
+		<div id='feedback' class='col-xs-12 col-md-4 col-lg-4 peer_comments well col-md-offset-1 col-xs-offset-0 col-lg-offset-1'>
+			{if has_comments}
+
+		<h2>What your group is saying about you.</h2>
+				{comments}
+
+					<p>&ldquo; {comment} &rdquo;</p>
+				{/comments}
+
+		</div>
+			{/if}
+		{/if}
+
+	 {if:else}
+	 <div id='message' class='col-xs-12 col-md-12 col-lg-12 well col-md-offset-0 col-xs-offset-0 col-lg-offset-0'>
+	 			<p>Your peer's feedback and calculated grades will appear here once you have assessed your group.</p>
+ 		</div>
+		 {/if}
+	</div>
+	  {/exp:lti_peer_assessment:feedback}
+
+</div>
+
+
+
+	<div class='row'>
+		<div class='col-xs-12 col-sm-6 col-lg-6 col-md-8 well col-xs-offset-0 col-sm-offset-1 col-md-offset-1 col-lg-offset-1'>
+			<h2>Your Evaluations of Other Group Members {exp:lti_peer_assessment:help_link section='students'}</h2>
+
+
+			<h3>Evaluation Form</h3>
+
+
+			<!-- <p style='font-size: 1.5em'><a href='peer_assessment/marking_impact'>Access this link for the Marking Impact document</a> -->
+			</p>
+			<br>
+			{exp:lti_peer_assessment:form type='single'}
+				{if table_row_count > 0}
+					<!-- check if form is available -->
+					{if has_rubric}
+						<div id='rubricWrapper'>
+					{/if}
+
+				{form_open}
+				<table class='table'>
+					<thead>
+						<tr>
+							<th>Name</th>
+
+							<th>Score</th>
+
+							<th>Comment</th>
+						</tr>
+					</thead>
+					<tbody>
+					 	{table_rows}
+								<tr {self_assess_id}>
+									<td>{group_member_screen_name}</td>
+
+									<td>{score_input}</td>
+
+									<td>{comment_textarea}</td>
+								</tr>
+					 {/table_rows}
+					</tbody>
+				</table>
+
+					{form_close}
+
+
+
+				{if has_rubric}
+					{rubric_javascript}
+						</div>
+				{/if}
+
+				{if:else}
+						<h3 style="color: darkblue">	Thank you for your submission.</h3>
+				{/if}
+			{/exp:lti_peer_assessment:form}
+		</div>
+	</div>
+	{/if}
+
+	<div class='row'>
+		<div class='col-xs-12 col-sm-12 col-md-12 col-lg-12 col-xs-offset-0 col-sm-offset-0 col-lg-offset-0 well'>
+			<p class='baklink'><a  href='{launch_presentation_return_url}'>Return to course: {course_name}</a>
+			</p>
+		</div>
+	</div>
+	<script>
+	         $(document).ready(function() { $('select').selectpicker(); });
+	</script> {/if} {/exp:learning_tools_integration}
+</body>
+</html>
