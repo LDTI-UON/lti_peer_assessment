@@ -4,9 +4,8 @@ ltipa.check_yourself =  function() {
       var val = 0, val2 = 0;
 
       val = $("form#assessments #self_assess_row textarea").val().length;
-      val2 = $("form#assessments #self_assess_row input").val();
 
-      if(val > 0 && val2 > 0) {
+      if(val > 0) {
           $("form#assessments tr input, form#assessments tr button, form#assessments tr textarea").prop("disabled", false);
           $("form#assessments tr[style]").css({"opacity": "inherit"});
       } else {
@@ -14,7 +13,8 @@ ltipa.check_yourself =  function() {
       }
   };
 
-$("#assessments").on("updateTableState", function() {
+$("#assessments table").on("updateTableState", function() {
+    //console.log("balhafdjlasdfl");
       ltipa.check_yourself();
 });
 
@@ -25,5 +25,5 @@ $(document).ready(function() {
 
     $("#assessments #self_assess_row input, form#assessments #self_assess_row textarea").on('keyup', ltipa.check_yourself);
 
-    $("#assessments").trigger("updateTableState");
+    $("#assessments table").trigger("updateTableState");
 });
