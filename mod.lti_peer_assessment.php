@@ -786,6 +786,9 @@ private function removeSpaceFillers($group_name)
               $variables[] = $variable_row;
         }
 
+      $variable_row['chosen_css'] = ee()->config->item("chosen_css");  
+      $variables[] = $variable_row;
+
        return ee()->TMPL->parse_variables(ee()->TMPL->tagdata, $variables);
     }
 
