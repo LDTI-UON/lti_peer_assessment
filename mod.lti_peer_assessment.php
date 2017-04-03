@@ -134,10 +134,11 @@ class Lti_peer_assessment
     public function __construct()
     {
         $this->EE = get_instance();
-        $this->lti_object = Learning_tools_integration::get_instance();
-
         static::$plugin_settings['score_calculation'] = static::$score_calculation;
         static::$plugin_settings['score_calculation']['spark_plus'] = static::$spark_plus;
+
+        if(!isset($_REQUEST["ACT"])) {
+        $this->lti_object = Learning_tools_integration::get_instance();
 
         $path = parse_url(ee()->config->site_url(), PHP_URL_PATH);
 
@@ -160,6 +161,7 @@ class Lti_peer_assessment
         if (ee()->TMPL->fetch_param('help_glyph_class')) {
             $this->help_glyph_class = ee()->TMPL->fetch_param('help_glyph_class');
         }
+      }
 
     if (empty(static::$apeg_url)) {
         static::$apeg_url = ee()->config->site_url();
@@ -786,7 +788,7 @@ private function removeSpaceFillers($group_name)
               $variables[] = $variable_row;
         }
 
-      $variable_row['chosen_css'] = ee()->config->item("chosen_css");  
+      $variable_row['chosen_css'] = ee()->config->item("chosen_css");
       $variables[] = $variable_row;
 
        return ee()->TMPL->parse_variables(ee()->TMPL->tagdata, $variables);
@@ -827,8 +829,9 @@ private function removeSpaceFillers($group_name)
   private function _group_member_list_query($assessor_group_id, $member_id, $locked = FALSE, $rolling = FALSE) {
 
     $str = $rolling ? "_rolling" : "";
-    ee()->db->save_queries = TRUE;
-    ee()->db->select("lti_group_contexts.id as group_context_id, members.member_id,
+    //ee()->db->save_queries = TRUE;
+    ee()->db->distinct();
+    ee()->db->select("lti_group_contexts.id as group_context_id,  members.member_id,
                         members.screen_name, lti_group_contexts.group_id, lti_group_contexts.group_name, lti_peer_assessments$str.score,
                         lti_peer_assessments$str.comment, lti_peer_assessments$str.rubric_json, lti_peer_assessments$str.locked");
     ee()->db->from("lti_group_contexts", "lti_peer_assessments$str");
@@ -904,6 +907,7 @@ public function form()
     }
 
     $assessor_group_id = $mrow->group_id;
+    $assessor_group_context_id = $mrow->id;
     $save_message = '';
 
     ee()->load->helper('form');
@@ -987,24 +991,34 @@ public function form()
                     $count = 0;
                     $success = -1;
                     do {
-                        $str_random = Learning_tools_integration::str_random();
+                      $str_random = Learning_tools_integration::str_random();
+                      $data = array('TMP_POST_ID' => $str_random);
+                      $r = ee()->db->get_where($form_table_name, $data);
+
+                    } while ($r->num_rows() > 0);
 
                         $where = array('assessor_member_id' => $member_id,
                                             'group_id' => $assessor_group_id,
                                             'group_context_id' => $asmrow['group_context_id'],
                                             'member_id' => $asmrow['member_id']);
 
+                        $count = $this->_group_member_count_group_id($assessor_group_id, $rolling ? '_rolling' : '');
+                        $ids = $this->_get_latest_assessment_ids($member_id, $assessor_group_context_id);
+
                         if($rolling) {
-                                  $where['locked'] = '0';
+                            $where['locked'] = 0;
                         }
 
-                        $peer_res = ee()->db->get_where($form_table_name, $where);
+                        ee()->db->distinct();
+                        ee()->db->where($where);
+                        ee()->db->where_in('group_context_id', explode(",", $ids));
+                        ee()->db->order_by("time", "desc");
 
-                        $data = array('TMP_POST_ID' => $str_random);
+                        $peer_res = ee()->db->get_where($form_table_name, $where, $count);
 
-                        if (isset($_POST['new_action']) || $peer_res->num_rows() == 0) {
-                            // echo "inserting...<br>";
-                                $insert_data = array_merge($where, $data);
+                        if ($peer_res->num_rows() == 0 || isset($_POST['new_action'])) {
+
+                            $insert_data = array_merge($where, $data);
                             ee()->db->insert($form_table_name, $insert_data);
                             $just_inserted = true;
                         } else {
@@ -1012,12 +1026,7 @@ public function form()
                             ee()->db->update($form_table_name, $data);
                         }
 
-                        $success = ee()->db->affected_rows();
-
-                        if ($count++ > 2) {
-                            return '<p>Error generating the student form. Secure key generation failed. Check your database.</p>';
-                        }
-                    } while ($success == -1);
+                        //$success = ee()->db->affected_rows()
 
                     $row = array();
 
@@ -2438,6 +2447,108 @@ private function instructor_report(&$max_assessors = 0)
         }
 
         return $totals;
+    }
+
+    private function _get_group_id_from_context($member_id, $group_context_id, $rolling = '') {
+        $sql = "SELECT DISTINCT group_id FROM `exp_lti_peer_assessments$rolling` WHERE member_id = $member_id and group_context_id = $group_context_id";
+
+        $r = ee()->db->query($sql);
+
+        return $r->row()->group_id;
+    }
+
+    private function _group_member_count($member_id, $group_context_id) {
+        $group_id = $this->_get_group_id_from_context($member_id, $group_context_id);
+
+        return $this->_group_member_count_group_id($group_id);
+    }
+
+    private function _group_member_count_group_id($group_id, $rolling = '_rolling') {
+        $sql = "SELECT COUNT(DISTINCT member_id) AS total FROM exp_lti_peer_assessments$rolling WHERE group_id = $group_id";
+
+        $r = ee()->db->query($sql);
+
+        return $r->row()->total;
+    }
+
+    private function _get_latest_assessment_ids($member_id, $group_context_id, $count = NULL, $group_id = NULL) {
+      if($group_id === NULL)
+        $group_id = $this->_get_group_id_from_context($member_id, $group_context_id);
+
+      if($count === NULL)
+        $count = $this->_group_member_count($member_id, $group_context_id);
+
+        ee()->db->select("id");
+        ee()->db->where(array("group_id" => $group_id, "assessor_member_id" => $member_id));
+        ee()->db->order_by("time", "desc");
+
+        $r = ee()->db->get("exp_lti_peer_assessments_rolling", $count);
+
+        $ids = array();
+
+        foreach($r->result_array() as $row) {
+            $ids[] = $row["id"];
+        }
+
+        unset($r);
+
+        ee()->db->select("id");
+        ee()->db->where(array("group_id" => $group_id, "assessor_member_id" => $member_id));
+        ee()->db->order_by("time, group_id", "desc");
+        $r = ee()->db->get("exp_lti_peer_assessments", $count);
+
+        foreach($r->result_array() as $row) {
+            $ids[] = $row["id"];
+        }
+
+        $str = implode(",", $ids);
+
+        return $str;
+    }
+
+    public function unlock_last_submission() {
+        $affected = 0;
+        $member_id = ee()->input->post('id');
+        $group_context_id = ee()->input->post('cxt');
+
+        $ids = $this->_get_latest_assessment_ids($member_id, $group_context_id);
+
+        $where = "id IN ($ids) AND `locked` = 1";
+
+        ee()->db->where($where);
+        ee()->db->update('lti_peer_assessments', array('locked' => 0));
+        $affected += ee()->db->affected_rows();
+
+        ee()->db->where($where);
+        ee()->db->update('lti_peer_assessments_rolling', array('locked' => 0));
+        $affected += ee()->db->affected_rows();
+
+      //  header('Content-Type: application/json');
+        echo json_encode(array("rows_affected" => $affected));
+        exit();
+    }
+
+    public function clear_last_submission() {
+        $affected = 0;
+
+        $member_id = ee()->input->post('id');
+        $group_context_id = ee()->input->post('cxt');
+
+        $ids = $this->_get_latest_assessment_ids($member_id, $group_context_id);
+
+        $where = "id IN ($ids) AND `locked` = 1";
+
+        ee()->db->where($where);
+        ee()->db->update('lti_peer_assessments', array('locked' => 0, 'rubric_json' => NULL, 'score' => 0, 'comment' => ''));
+        $affected += ee()->db->affected_rows();
+
+        ee()->db->where($where);
+        ee()->db->update('lti_peer_assessments_rolling', array('locked' => 0, 'rubric_json' => NULL, 'score' => 0, 'comment' => ''));
+        $affected += ee()->db->affected_rows();
+
+      //  header('Content-Type: application/json');
+        echo json_encode(array("rows_affected" => $affected));
+        exit();
     }
 }
 

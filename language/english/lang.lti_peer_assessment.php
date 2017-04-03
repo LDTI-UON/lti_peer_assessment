@@ -53,6 +53,8 @@ $lang = array(
 	// 'session_expired' => "Your session has expired, return to your institutions site and click the link again to regain access.",
 	 'assessment_locked' => "You have already assessed the other students in your group.",
 	 'user_has_no_group' => "You have not yet been assigned to any groups for this course.",
+	 'student_table_header6' => "Unlock Submission",
+	 'student_table_header7' => "Clear Submission",
 );
 
 /* End of file lang.learning_tools_integration.php */

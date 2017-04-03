@@ -26,7 +26,7 @@
 
 class Lti_peer_assessment_upd {
 
-public $version = '0.8.34'; #build version#
+public $version = '0.8.35'; #build version#
 public $mod_class = 'Lti_peer_assessment';
 
 private $EE;
@@ -184,12 +184,19 @@ ee()->load->dbforge();
 		*/
 		$this->_alter_tables($this->version);
 
-		/*
-				Following 2 lines from Mfoo's answer here:
-				http://stackoverflow.com/questions/3395798/mysql-check-if-a-column-exists-in-a-table-with-sql#7264865
-		*/
+		$data = array (
+				'class' => $this->mod_class,
+				'method' => 'clear_last_submission'
+		);
 
+		ee ()->db->insert ( 'actions', $data );
 
+		$data = array (
+				'class' => $this->mod_class,
+				'method' => 'unlock_last_submission'
+		);
+
+		ee ()->db->insert ( 'actions', $data );
 
 		return TRUE;
 }
@@ -411,6 +418,22 @@ return TRUE;
 public function update($current = '')
 {
 $this->_alter_tables($current);
+
+if (version_compare($current, '0.8.35', '<')) {
+			$data = array (
+					'class' => $this->mod_class,
+					'method' => 'clear_last_submission'
+			);
+
+			ee ()->db->insert ( 'actions', $data );
+
+			$data = array (
+					'class' => $this->mod_class,
+					'method' => 'unlock_last_submission'
+			);
+
+			ee ()->db->insert ( 'actions', $data );
+}
 
 return TRUE;
 }
