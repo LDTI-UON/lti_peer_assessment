@@ -839,7 +839,7 @@ private function removeSpaceFillers($group_name)
     ee()->db->join("members", "members.member_id = lti_member_contexts.member_id");
     ee()->db->join("lti_peer_assessments$str", "lti_peer_assessments$str.group_context_id = lti_group_contexts.id", "left outer");
 
-    $where = array("lti_group_contexts.group_id" => $assessor_group_id, "lti_peer_assessments$str.assessor_member_id" => $member_id);
+    $where = array("lti_group_contexts.group_id" => $assessor_group_id, "lti_peer_assessments$str.assessor_member_id" => $member_id, "lti_peer_assessments$str.current" => TRUE );
 
     // exclusive query here...
     if($locked === TRUE) {
@@ -910,6 +910,31 @@ public function form()
     $assessor_group_context_id = $mrow->id;
     $save_message = '';
 
+    ee()->db->where(array('assessor_member_id' => $member_id, 'group_id' => $assessor_group_id, 'current' => 1));
+    $res = ee()->db->get($form_table_name);
+
+    if($res->num_rows() > 0) {
+      foreach($res->result_array() as $row) {
+        $group_context_id = $row['group_context_id'];
+        $previous_id = $row['previous_id'];
+
+          if(empty($previous_id) && isset($group_context_id )) {
+              ee()->db->where(array('assessor_member_id' => $member_id, 'group_context_id' => $group_context_id, 'locked' => 1));
+              ee()->db->order_by('time', 'desc');
+
+              $res = ee()->db->get($form_table_name);
+              if($res->num_rows() > 0) {
+                    $previous_id = $res->row()->id;
+
+                    ee()->db->where(array('assessor_member_id' => $member_id, 'group_context_id' => $group_context_id, 'current' => 1, 'locked' => 0));
+                    ee()->db->update($form_table_name, array('previous_id' => $previous_id));
+              }
+          }
+
+        unset($group_context_id);
+      }
+    }
+
     ee()->load->helper('form');
 
     $form = '';//."<h1>".$this->lti_object->resource_link_id."</h1>";
@@ -943,9 +968,11 @@ public function form()
         $total_affected = 0;
 
         foreach ($post_data as $student_id => $row) {
+
             ee()->db->where(array('TMP_POST_ID' => $student_id, 'assessor_member_id' => $member_id));
             $rubric_json = !empty($row['rubric_json']) ? $row['rubric_json'] : '';
-            ee()->db->update($form_table_name, array('score' => $row['score'], 'comment' => $row['comment'], 'rubric_json' => $rubric_json, 'locked' => ee()->input->post('locked'), 'TMP_POST_ID' => null));
+            $locked = ee()->input->post('locked');
+            ee()->db->update($form_table_name, array('score' => $row['score'], 'comment' => $row['comment'], 'rubric_json' => $rubric_json, 'locked' => $locked, 'current' => ! $locked, 'TMP_POST_ID' => null));
 
             $total_affected +=  ee()->db->affected_rows();
         }
@@ -1000,24 +1027,14 @@ public function form()
                         $where = array('assessor_member_id' => $member_id,
                                             'group_id' => $assessor_group_id,
                                             'group_context_id' => $asmrow['group_context_id'],
-                                            'member_id' => $asmrow['member_id']);
+                                            'member_id' => $asmrow['member_id'],
+                                          'current' => 1);
 
-                        $count = $this->_group_member_count_group_id($assessor_group_id, $rolling ? '_rolling' : '');
-                        $ids = $this->_get_latest_assessment_ids($member_id, $assessor_group_context_id);
-
-                        if($rolling) {
-                            $where['locked'] = 0;
-                        }
-
-                        ee()->db->distinct();
                         ee()->db->where($where);
-                        ee()->db->where_in('group_context_id', explode(",", $ids));
-                        ee()->db->order_by("time", "desc");
 
-                        $peer_res = ee()->db->get_where($form_table_name, $where, $count);
+                        $peer_res = ee()->db->get_where($form_table_name, $where);
 
-                        if ($peer_res->num_rows() == 0 || isset($_POST['new_action'])) {
-
+                        if ($peer_res->num_rows() == 0) {
                             $insert_data = array_merge($where, $data);
                             ee()->db->insert($form_table_name, $insert_data);
                             $just_inserted = true;
@@ -1025,8 +1042,6 @@ public function form()
                             ee()->db->where($where);
                             ee()->db->update($form_table_name, $data);
                         }
-
-                        //$success = ee()->db->affected_rows()
 
                     $row = array();
 
@@ -2140,7 +2155,12 @@ private function get_latest_peer_assessment($member_id = NULL) {
                             $max_assessors = $members_assessed_this_student[$row['member_id']] > $max_assessors ? $members_assessed_this_student[$row['member_id']] : $max_assessors;
                         }
 
+                        if(!isset($row['member_id'])) {
+                              $totals[$row['member_id']] = 0;
+                        }
+
                         $totals[$row['member_id']] += $score;
+
                         $peer_ratings[$row['group_id']][$row['member_id']] = $score;
 
                         // for SPA calcualtion
@@ -2449,7 +2469,7 @@ private function instructor_report(&$max_assessors = 0)
         return $totals;
     }
 
-    private function _get_group_id_from_context($member_id, $group_context_id, $rolling = '') {
+  /*  private function _get_group_id_from_context($member_id, $group_context_id, $rolling = '') {
         $sql = "SELECT DISTINCT group_id FROM `exp_lti_peer_assessments$rolling` WHERE member_id = $member_id and group_context_id = $group_context_id";
 
         $r = ee()->db->query($sql);
@@ -2469,6 +2489,10 @@ private function instructor_report(&$max_assessors = 0)
         $r = ee()->db->query($sql);
 
         return $r->row()->total;
+    }*/
+
+    /*private function _get_current_assessment_ids() {
+
     }
 
     private function _get_latest_assessment_ids($member_id, $group_context_id, $count = NULL, $group_id = NULL) {
@@ -2504,26 +2528,65 @@ private function instructor_report(&$max_assessors = 0)
         $str = implode(",", $ids);
 
         return $str;
+    }*/
+
+    private function __current_submission_where_clause($member_id, $group_id) {
+          return array("assessor_member_id" => $member_id, "group_id" => $group_id, "current" => 1);
+    }
+
+    private function _clear_pointer_to_current($member_id, $group_id, $rolling = "") {
+        $where = $this->__current_submission_where_clause($member_id, $group_id);
+
+        ee()->db->where($where);
+        ee()->db->update("lti_peer_assessments$rolling", array("current" => 0));
+    }
+
+    private function _get_last_assessment_ids($member_id, $group_id, $rolling = "") {
+          $where = $this->__current_submission_where_clause($member_id, $group_id);
+
+          ee()->db->select("`previous_id` as `id`");
+          ee()->db->where($where);
+          $res = ee()->db->get("lti_peer_assessments$rolling");
+
+          $ids = array();
+          foreach($res->result_array() as $row) {
+                  $ids[] = $row['id'];
+          }
+          $str = implode(",", $ids);
+
+          if(strlen(trim($str)) > 0) {
+                return "($str)";
+          }
+
+          return FALSE;
     }
 
     public function unlock_last_submission() {
         $affected = 0;
         $member_id = ee()->input->post('id');
-        $group_context_id = ee()->input->post('cxt');
+        $group_id = ee()->input->post('cxt');
 
-        $ids = $this->_get_latest_assessment_ids($member_id, $group_context_id);
+        $str = $this->_get_last_assessment_ids($member_id, $group_id); // MUST stay in this order!!
 
-        $where = "id IN ($ids) AND `locked` = 1";
+        if($str !== FALSE) {
+        $this->_clear_pointer_to_current($member_id, $group_id);
 
-        ee()->db->where($where);
-        ee()->db->update('lti_peer_assessments', array('locked' => 0));
+        ee()->db->where("id IN $str");
+        ee()->db->update('lti_peer_assessments', array('locked' => 0, 'current' => 1));
         $affected += ee()->db->affected_rows();
+        }
 
-        ee()->db->where($where);
-        ee()->db->update('lti_peer_assessments_rolling', array('locked' => 0));
-        $affected += ee()->db->affected_rows();
+        $str = $this->_get_last_assessment_ids($member_id, $group_id, "_rolling");
 
-      //  header('Content-Type: application/json');
+        if($str !== FALSE) {
+            $this->_clear_pointer_to_current($member_id, $group_id, "_rolling");
+
+
+            ee()->db->where("id IN $str");
+            ee()->db->update('lti_peer_assessments_rolling', array('locked' => 0, 'current' => 1));
+            $affected += ee()->db->affected_rows();
+        }
+
         echo json_encode(array("rows_affected" => $affected));
         exit();
     }
@@ -2532,21 +2595,22 @@ private function instructor_report(&$max_assessors = 0)
         $affected = 0;
 
         $member_id = ee()->input->post('id');
-        $group_context_id = ee()->input->post('cxt');
+        $group_id = ee()->input->post('cxt');
 
-        $ids = $this->_get_latest_assessment_ids($member_id, $group_context_id);
+        $str = $this->_get_last_assessment_ids($member_id, $group_id);
+        $this->_clear_pointer_to_current($member_id, $group_id);
 
-        $where = "id IN ($ids) AND `locked` = 1";
-
-        ee()->db->where($where);
-        ee()->db->update('lti_peer_assessments', array('locked' => 0, 'rubric_json' => NULL, 'score' => 0, 'comment' => ''));
+        ee()->db->where("id IN $str");
+        ee()->db->update('lti_peer_assessments', array('locked' => 0, 'rubric_json' => NULL, 'score' => 0, 'comment' => '', 'current' => 1));
         $affected += ee()->db->affected_rows();
 
-        ee()->db->where($where);
-        ee()->db->update('lti_peer_assessments_rolling', array('locked' => 0, 'rubric_json' => NULL, 'score' => 0, 'comment' => ''));
+        $str = $this->_get_last_assessment_ids($member_id, $group_id, "_rolling");
+        $this->_clear_pointer_to_current($member_id, $group_id, "_rolling");
+
+        ee()->db->where("id IN $str");
+        ee()->db->update('lti_peer_assessments_rolling', array('locked' => 0, 'rubric_json' => NULL, 'score' => 0, 'comment' => '', 'current' => 1));
         $affected += ee()->db->affected_rows();
 
-      //  header('Content-Type: application/json');
         echo json_encode(array("rows_affected" => $affected));
         exit();
     }

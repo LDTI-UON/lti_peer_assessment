@@ -122,6 +122,8 @@ ee()->load->dbforge();
 		$sql = "ALTER TABLE $table_name ADD UNIQUE INDEX (assessor_member_id, member_id, group_context_id)";
 		ee()->db->query($sql);
 
+		$sql = "ALTER TABLE $table_name ADD `test` BOOLEAN NOT NULL DEFAULT FALSE AFTER `previous`;";
+
 		// rolling peer assessment
 				$fields = array(
 											'id' => array('type' => 'INT',
@@ -433,6 +435,24 @@ if (version_compare($current, '0.8.35', '<')) {
 			);
 
 			ee ()->db->insert ( 'actions', $data );
+
+			$table_name = ee()->db->dbprefix("lti_peer_assessments");
+
+			$sql = "ALTER TABLE $table_name ADD `current` BOOLEAN NOT NULL DEFAULT TRUE AFTER `TMP_POST_ID`;";
+			ee()->db->query($sql);
+
+			$sql = "ALTER TABLE $table_name ADD `previous` BOOLEAN NOT NULL DEFAULT FALSE AFTER `current`;";
+			ee()->db->query($sql);
+
+			$table_name = ee()->db->dbprefix("lti_peer_assessments_rolling");
+
+			$sql = "ALTER TABLE $table_name ADD `current` BOOLEAN NOT NULL DEFAULT TRUE AFTER `TMP_POST_ID`;";
+			ee()->db->query($sql);
+
+			$sql = "ALTER TABLE $table_name ADD `previous` BOOLEAN NOT NULL DEFAULT FALSE AFTER `current`;";
+			ee()->db->query($sql);
+
+			//"ALTER TABLE `exp_lti_peer_assessments` CHANGE `previous_id` `previous_id` INT(11) NULL DEFAULT '0';"
 }
 
 return TRUE;
