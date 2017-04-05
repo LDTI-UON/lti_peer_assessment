@@ -2160,7 +2160,7 @@ private function get_latest_peer_assessment($member_id = NULL) {
                     if ($score > 0) {
                         if ($this->include_self_in_mean_score || !$settings['score_calculation']['standard_mean']) {
                             $this->inc_assessors($members_assessed_this_student, $row['member_id']);
-                        } elseif ($amr->member_id !== $row['member_id']) {
+                        } else {
                             $this->inc_assessors($members_assessed_this_student, $row['member_id']);
                         }
 
@@ -2183,9 +2183,9 @@ private function get_latest_peer_assessment($member_id = NULL) {
                     }
             } else {
                 if ($score > 0) {
-                    if ($this->include_self_in_mean_score || $amr->member_id !== $row['member_id']) {
+                  //  if ($this->include_self_in_mean_score || $amr->member_id !== $row['member_id']) {
                         $this->init_assessors($score, 1, $row['member_id'], $members_assessed_this_student, $totals);
-                    }
+                  //  }
 
                     if ($settings['score_calculation']['standard_mean']) {
                         $excel_rows[$row['member_id']] =
@@ -2211,9 +2211,9 @@ private function get_latest_peer_assessment($member_id = NULL) {
                                   'assessor_cols' => array($assessor_member_col), );
                     }
                 } else {
-                    if ($this->include_self_in_mean_score || $amr->member_id !== $row['member_id']) {
+                  //  if ($this->include_self_in_mean_score || $amr->member_id !== $row['member_id']) {
                         $this->init_assessors(0, 0, $row['member_id'], $members_assessed_this_student, $totals);
-                    }
+                  //  }
 
                     if ($settings['score_calculation']['standard_mean']) {
                         $excel_rows[$row['member_id']] =
@@ -2247,15 +2247,22 @@ private function get_latest_peer_assessment($member_id = NULL) {
           if(isset($members_assessed_this_student[$row['member_id']])) {
             if ($members_assessed_this_student[$row['member_id']] > 0) {
                 if ($settings['score_calculation']['standard_mean']) {    // standard mean
-                          $mean_score = (int) $totals[$row['member_id']] / $members_assessed_this_student[$row['member_id']];
+                    $members =  $members_assessed_this_student[$row['member_id']];
+                    if(! $this->include_self_in_mean_score) { $members = $members - 1;}
 
+                    if($members > 0) {
+                        $mean_score = (int) $totals[$row['member_id']] / $members;
+                    } else {
+                        $mean_score = 0;
+                      }
                     $excel_rows[$row['member_id']]['mean'] = round($mean_score, 0, PHP_ROUND_HALF_DOWN);
                     $excel_rows[$row['member_id']]['multiplier'] = round($mean_score / $max_score, 2, PHP_ROUND_HALF_DOWN);
                 } else { // SPARK algorithm
                   if(isset($group_totals[$row['group_id']])) {
                     $group_mean = $this->group_mean($group_totals[$row['group_id']]);
-                    $mean_score = $totals[$row['member_id']] / $group_mean;
-
+                    if($group_mean > 0) {
+                        $mean_score = $totals[$row['member_id']] / $group_mean;
+                    } else{ $mean_score = 0;}
                     $SAPA_factor = $this->get_SAPA($row['member_id'], $peer_ratings[$row['group_id']]);
 
                     $SPA_factor = sqrt($mean_score);
@@ -2330,16 +2337,16 @@ private function get_latest_peer_assessment($member_id = NULL) {
 
             $total = 0;
             $count = 0;
-            foreach ($peer_ratings_array as $row) {
-                if(isset($row['member_id'])) {
-                    if($row['member_id'] != $member_id) {
-                              $total += $row['score'];
+            foreach ($peer_ratings_array as $a_member_id => $score) {
+              //  if(isset($a_member_id)) {
+                    if($a_member_id != $member_id) {
+                              $total += $score;
                               $count = $count + 1;
                     }
-                }
+                //}
             }
 
-            if($count > 0 && $mean_peer_rating > 0) {
+          if($count > 0 && $total > 0/*&& $mean_peer_rating > 0*/) {
                   $mean_peer_rating = $total / $count;
                   $self_div_mean = $indiv_rating / $mean_peer_rating;
 
@@ -2360,7 +2367,15 @@ private function get_latest_peer_assessment($member_id = NULL) {
             $group_total += (int) $total;
         }
 
-        $mean = $group_total / count($group_totals);
+        $members = count($group_totals);
+
+        if(! $this->include_self_in_mean_score)  {
+            $members = $members - 1;
+        }
+
+        if($members > 0) {
+            $mean = $group_total / $members;
+        }
 
         return $mean;
     }
