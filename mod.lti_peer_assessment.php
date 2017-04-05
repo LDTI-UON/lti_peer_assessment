@@ -138,29 +138,29 @@ class Lti_peer_assessment
         static::$plugin_settings['score_calculation']['spark_plus'] = static::$spark_plus;
 
         if(!isset($_REQUEST["ACT"])) {
-        $this->lti_object = Learning_tools_integration::get_instance();
+              $this->lti_object = Learning_tools_integration::get_instance();
 
-        $path = parse_url(ee()->config->site_url(), PHP_URL_PATH);
+              $path = parse_url(ee()->config->site_url(), PHP_URL_PATH);
 
-        if (ee()->TMPL->fetch_param('table_class')) {
-            $this->table_class = ee()->TMPL->fetch_param('table_class');
-        }
+              if (ee()->TMPL->fetch_param('table_class')) {
+                  $this->table_class = ee()->TMPL->fetch_param('table_class');
+              }
 
-        if (ee()->TMPL->fetch_param('button_class')) {
-            $this->button_class = ee()->TMPL->fetch_param('button_class');
-        }
+              if (ee()->TMPL->fetch_param('button_class')) {
+                  $this->button_class = ee()->TMPL->fetch_param('button_class');
+              }
 
-        if (ee()->TMPL->fetch_param('score_class')) {
-            $this->score_class = ee()->TMPL->fetch_param('score_class');
-        }
+              if (ee()->TMPL->fetch_param('score_class')) {
+                  $this->score_class = ee()->TMPL->fetch_param('score_class');
+              }
 
-        if (ee()->TMPL->fetch_param('img_class')) {
-            $this->img_class = ee()->TMPL->fetch_param('img_class');
-        }
+              if (ee()->TMPL->fetch_param('img_class')) {
+                  $this->img_class = ee()->TMPL->fetch_param('img_class');
+              }
 
-        if (ee()->TMPL->fetch_param('help_glyph_class')) {
-            $this->help_glyph_class = ee()->TMPL->fetch_param('help_glyph_class');
-        }
+              if (ee()->TMPL->fetch_param('help_glyph_class')) {
+                  $this->help_glyph_class = ee()->TMPL->fetch_param('help_glyph_class');
+              }
       }
 
     if (empty(static::$apeg_url)) {
@@ -520,6 +520,7 @@ class Lti_peer_assessment
 
         // get rubric template
         $rubric_template = $this->get_rubric_data_array();
+
         $sums = array();
         $comments = array();
 
@@ -1379,8 +1380,11 @@ $mainDocument->getProperties()->setCreator('Paul Sijpkes')
 
         foreach($this->rubric_template_array['col_scores'] as $key => $score) {
             $k = $key+1;
-            $sheet->getActiveSheet()->setCellValue($cellStr++.$index, $score);
-
+            if(is_array($score)) {
+                $sheet->getActiveSheet()->setCellValue($cellStr.$index, $score["range"]["min"]." - ".$score["range"]["max"]);
+            } else {
+                $sheet->getActiveSheet()->setCellValue($cellStr++.$index, $score);
+            }
             if(($k % $colLength) == 0) {
                 $index = $index + 1;
                 $cellStr = "B";
@@ -1420,7 +1424,17 @@ $mainDocument->getProperties()->setCreator('Paul Sijpkes')
           foreach($rubric_data['rows'] as $key => $row) {
               $k = $key+3;
               $c = static::addNChars($cellStr, (int)$row['col']);
+              $val = $sheet->setActiveSheetIndex($mySheetIndex)->getCell($c.$k)->getValue();
 
+              if(strrpos($val, "-") !== FALSE) {
+                  $score = 0;
+
+                  if(isset($row['score'])) {
+                     $score = $row['score'];
+                  }
+
+                  $sheet->setActiveSheetIndex($mySheetIndex)->setCellValue($c.$k, $score);
+              }
               $sheet->setActiveSheetIndex($mySheetIndex)->getStyle($c.$k)->applyFromArray(
                   $criteria_select_style
                 );
@@ -2088,7 +2102,6 @@ private function get_latest_peer_assessment($member_id = NULL) {
 
     private function excel_instructor_report(&$max_assessors = 0)
     {
-
         $max_score = $this->get_score_setting();
         $include_self_in_mean_score = $this->get_self_mean_setting();
 
@@ -2155,7 +2168,7 @@ private function get_latest_peer_assessment($member_id = NULL) {
                             $max_assessors = $members_assessed_this_student[$row['member_id']] > $max_assessors ? $members_assessed_this_student[$row['member_id']] : $max_assessors;
                         }
 
-                        if(!isset($row['member_id'])) {
+                        if(!isset($totals[$row['member_id']])) {
                               $totals[$row['member_id']] = 0;
                         }
 
@@ -2318,10 +2331,12 @@ private function get_latest_peer_assessment($member_id = NULL) {
             $total = 0;
             $count = 0;
             foreach ($peer_ratings_array as $row) {
-                    if($row['member_id'] !== $member_id) {
+                if(isset($row['member_id'])) {
+                    if($row['member_id'] != $member_id) {
                               $total += $row['score'];
                               $count = $count + 1;
                     }
+                }
             }
 
             if($count > 0 && $mean_peer_rating > 0) {
