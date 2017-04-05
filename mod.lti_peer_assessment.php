@@ -78,9 +78,9 @@ class Lti_peer_assessment
                       array(
                         'active' => 1,
                         'show_grade_column' => false,
-                        'show_comments' => false,
-                        'allow_self_assessment' => false,
-                        'show_column_scores' => false,
+                        'show_comments' => true,
+                        'allow_self_assessment' => true,
+                        'show_column_scores' => true,
                         'include_self_in_mean_score' => false,
                         'score_calculation' => array(),
                         'user_access' => '',
