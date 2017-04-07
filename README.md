@@ -14,21 +14,9 @@ This plugin requires the [EE3 LTI Module](https://bitbucket.org/sijpkes/ee3-lti-
 
 ## EE Tags Provided ##
 
-Type parameters for feedback and form tags (below)
-```
-type = 'single'
-```
-Provides one-off group member feedback comments and scores to the currently logged in user.
-
-```
-type = 'rolling'
-```
-This setting allows the contribution to be rolling, or continuous so users can provide feedback on a regular basis
-```
-
 #!html
 
-{exp:lti_peer_assessment:feedback type='rolling | single'}
+{exp:lti_peer_assessment:feedback}
 
       {total} <!-- total mean score given by all peers -->
       {total_max} <!-- max total score possible -->
@@ -73,7 +61,7 @@ Get maximum score for assessment derived from rubric or added in settings.
 ```
 #!html
 
-{exp:lti_peer_assessment:form type = 'single|rolling'}
+{exp:lti_peer_assessment:form}
       {has_rubric} <!-- conditional to check if this assessment has a rubric.-->
 
       {form_open}
@@ -93,16 +81,6 @@ Get maximum score for assessment derived from rubric or added in settings.
 ```
 
 Renders a table containing all group members and input fields for score, comments.  Any attached rubric will replace the score text input field automagically with a button to open that rubric.
-
-
-```
-#!html
-
-{exp:lti_peer_assessment:rolling_form}
-```
-
-As for the form tag except that assessment can be continuous and provided on day-by-day or week-by-week basis.
-
 
 ```
 #!html

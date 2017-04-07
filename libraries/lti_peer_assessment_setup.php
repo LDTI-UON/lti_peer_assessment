@@ -47,7 +47,6 @@ $lonely_users = array();
 
                 $peer_data = array('group_context_id' => $group_data -> id, 'assessor_member_id' => $assessing_member['member_id'], 'member_id' => $group_member['member_id']);
                 $sanity =  ee() -> db -> get_where('lti_peer_assessments', $peer_data);
-                $rolling_sanity =  ee() -> db -> get_where('lti_peer_assessments_rolling', $peer_data);
 
                 if ($sanity -> num_rows() == 0) {
                     $peer_data['group_id'] = $group['group_id'];
@@ -60,18 +59,6 @@ $lonely_users = array();
                        $groups_updated = true;
                 }
 
-                $peer_data = array('group_context_id' => $group_data -> id, 'assessor_member_id' => $assessing_member['member_id'], 'member_id' => $group_member['member_id']);
-
-                if ($rolling_sanity -> num_rows() == 0) {
-                      $peer_data['group_id'] = $group['group_id'];
-                      ee() -> db -> insert('lti_peer_assessments_rolling', $peer_data);
-                       $groups_inserted = true;
-                } else {
-                    $groups_updated = true;
-                    ee()->db->where($peer_data);
-                    $peer_data['group_id'] = $group['group_id'];
-                    ee()->db->update('lti_peer_assessments_rolling', $peer_data);
-               }
             }
       //  }
     }
@@ -82,7 +69,7 @@ if($groups_inserted === true) {
 }
 
 if($groups_updated === true) {
-    $form .= "<p style='color: darkblue'>All groups re-registered for rolling peer assessment.</p>";
+    $form .= "<p style='color: darkblue'>All groups re-registered for peer assessment.</p>";
 }
 
 /* clean-up orphaned peer assessments (without group context)
@@ -91,13 +78,11 @@ if($groups_updated === true) {
 */
 
 $single_table = ee()->db->dbprefix("lti_peer_assessments");
-$rolling_table = ee()->db->dbprefix("lti_peer_assessments_rolling");
 
 $group_contexts_table = ee()->db->dbprefix("lti_group_contexts");
 
 $drop_sql = "DROP TEMPORARY TABLE IF EXISTS `flag_for_delete`";
 $delete_single = "DELETE FROM `$single_table` WHERE `id` IN (SELECT `id` FROM `flag_for_delete`)";
-$delete_rolling = "DELETE FROM `$rolling_table` WHERE `id` IN (SELECT `id` FROM `flag_for_delete`)";
 
 ee()->db->query($drop_sql);
 
@@ -114,15 +99,3 @@ ee()->db->query($create_single_sql);
 ee()->db->query($delete_single);
 
 ee()->db->query($drop_sql);
-
-// rolling peer assessment clean-up
-$create_rolling_sql = "CREATE TEMPORARY TABLE IF NOT EXISTS `flag_for_delete` AS
-    (SELECT DISTINCT `A`.`id` FROM `$rolling_table` `A`
-    LEFT JOIN `$group_contexts_table` `B` ON `A`.`member_id`
-    LEFT JOIN `$group_contexts_table` `C` ON `A`.`assessor_member_id`
-    WHERE `A`.`group_context_id` NOT IN
-    (SELECT `id` FROM `$group_contexts_table`));";
-
-ee()->db->query($create_rolling_sql);
-
-ee()->db->query($delete_rolling);

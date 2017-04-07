@@ -298,8 +298,8 @@
 			<!-- <p style='font-size: 1.5em'><a href='peer_assessment/marking_impact'>Access this link for the Marking Impact document</a> -->
 			</p>
 			<br>
-			{exp:lti_peer_assessment:form type='single'}
-				{if table_row_count > 0}
+			{exp:lti_peer_assessment:form}
+			{if ! user_has_assessed}
 					<!-- check if form is available -->
 					{if has_rubric}
 						<div id='rubricWrapper'>

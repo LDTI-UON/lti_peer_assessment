@@ -35,7 +35,6 @@ private $EE;
 private $instructor_settings_table_name;
 private $course_link_resources_table_name;
 private $lti_peer_assessment_table_name;
-private $lti_peer_assessment_rolling_table_name;
 /**
 * Constructor
 */
@@ -44,7 +43,6 @@ public function __construct()
 $this->instructor_settings_table_name = ee()->db->dbprefix("lti_instructor_settings");
 $this->course_link_resources_table_name = ee()->db->dbprefix("lti_course_link_resources");
 $this->lti_peer_assessment_table_name = ee()->db->dbprefix("lti_peer_assessment");
-$this->lti_peer_assessment_rolling_table_name = ee()->db->dbprefix("lti_peer_assessment_rolling");
 }
 
 // ----------------------------------------------------------------
@@ -111,6 +109,15 @@ ee()->load->dbforge();
 										 'TMP_POST_ID' => array('type' => 'VARCHAR',
 																						'constraint' => '8',
 																						'null' => TRUE),
+											'current' => array("type" => "BOOLEAN",
+																			 		"default" => 1),
+											'previous_id' =>
+																	array("type" => "INT",
+																			"constraint" => 11,
+																			"default" => NULL,
+																			"null" => TRUE,
+																	)
+
 		);
 
 		ee()->dbforge->add_field($fields);
@@ -120,65 +127,6 @@ ee()->load->dbforge();
 
 		$table_name = ee()->db->dbprefix("lti_peer_assessments");
 		$sql = "ALTER TABLE $table_name ADD UNIQUE INDEX (assessor_member_id, member_id, group_context_id)";
-		ee()->db->query($sql);
-
-		$sql = "ALTER TABLE $table_name ADD `test` BOOLEAN NOT NULL DEFAULT FALSE AFTER `previous`;";
-
-		// rolling peer assessment
-				$fields = array(
-											'id' => array('type' => 'INT',
-																		'constraint' => '11',
-																			 'null' => FALSE,
-																	 'auto_increment' => TRUE),
-										'group_id' => array('type' => 'MEDIUMINT',
-																				'constraint' => '5',
-																				'null' => FALSE ),
-										'assessor_member_id' => array('type' => 'MEDIUMINT',
-																						 'constraint' => '5',
-																						 'null' => FALSE,
-																						 'auto_increment' => FALSE),
-										'member_id' => array('type' => 'MEDIUMINT',
-																						 'constraint' => '5',
-																						 'null' => FALSE,
-																						 'auto_increment' => FALSE),
-										'group_context_id' => array(
-																						 'type' => 'MEDIUMINT',
-																						 'constraint' => '5',
-																						 'null' => FALSE,
-																						 'auto_increment' => FALSE
-																			),
-										'score' => array(
-																						 'type' => 'SMALLINT',
-																						 'constraint' => '3',
-																						 'null' => FALSE
-																			),
-										 'comment' => array(
-																						 'type' => 'TEXT',
-																						 'null' => FALSE
-																				),
-										'rubric_json' => array(
-																						 'type' => 'VARCHAR',
-																								'constraint' => '1000',
-																						 'null' => FALSE
-																				),
-										 'locked' => array( 'type' => 'TINYINT',
-																				'constraint' => '1',
-																				'null' => FALSE,
-																				'default' => '0'
-																				),
-												'time' => array('type' => 'TIMESTAMP'),
-										 'TMP_POST_ID' => array('type' => 'VARCHAR',
-																						'constraint' => '8',
-																						'null' => TRUE),
-		);
-
-		ee()->dbforge->add_field($fields);
-		ee()->dbforge->add_key('id', TRUE);
-		ee()->dbforge->add_key(array('assessor_member_id', 'member_id', 'group_context_id'));
-		ee()->dbforge->create_table('lti_peer_assessments_rolling', TRUE);
-
-		$table_name = ee()->db->dbprefix("lti_peer_assessments_rolling");
-		$sql = "CREATE INDEX assessor_rolling_context_index ON $table_name(assessor_member_id, member_id, group_context_id)";
 		ee()->db->query($sql);
 
 		/*
@@ -273,16 +221,6 @@ private function _alter_tables($current) {
 
 					if( $exists ) {
 							$alter_table = "ALTER TABLE  `$this->lti_peer_assessment_table_name` MODIFY `score` float unsigned;";
-							ee()->db->query($alter_table);
-					}
-				}
-
-				if ( ee()->db->table_exists( $this->lti_peer_assessment_rolling_table_name ) ) {
-					$result = ee()->db->query("SHOW COLUMNS FROM `$this->lti_peer_assessment_rolling_table_name` LIKE 'score'");
-					$exists = (count($result->result()) === 1) ? TRUE : FALSE;
-
-					if( $exists ) {
-							$alter_table = "ALTER TABLE  `$this->lti_peer_assessment_rolling_table_name` MODIFY `score` float unsigned;";
 							ee()->db->query($alter_table);
 					}
 				}
@@ -403,7 +341,6 @@ ee()->db->where('module_name', $this->mod_class)
 
 ee()->load->dbforge();
 ee()->dbforge->drop_table('lti_peer_assessments');
-ee()->dbforge->drop_table('lti_peer_assessments_rolling');
 
 ee()->db->delete('actions', array('class' => $this->mod_class, 'method' => 'message_preference'));
 
@@ -441,18 +378,10 @@ if (version_compare($current, '0.8.35', '<')) {
 			$sql = "ALTER TABLE $table_name ADD `current` BOOLEAN NOT NULL DEFAULT TRUE AFTER `TMP_POST_ID`;";
 			ee()->db->query($sql);
 
-			$sql = "ALTER TABLE $table_name ADD `previous` BOOLEAN NOT NULL DEFAULT FALSE AFTER `current`;";
+			$sql = "ALTER TABLE $table_name ADD `previous_id` INT(11) DEFAULT NULL AFTER `current`;";
 			ee()->db->query($sql);
 
-			$table_name = ee()->db->dbprefix("lti_peer_assessments_rolling");
-
-			$sql = "ALTER TABLE $table_name ADD `current` BOOLEAN NOT NULL DEFAULT TRUE AFTER `TMP_POST_ID`;";
-			ee()->db->query($sql);
-
-			$sql = "ALTER TABLE $table_name ADD `previous` BOOLEAN NOT NULL DEFAULT FALSE AFTER `current`;";
-			ee()->db->query($sql);
-
-			//"ALTER TABLE `exp_lti_peer_assessments` CHANGE `previous_id` `previous_id` INT(11) NULL DEFAULT '0';"
+			ee()->dbforge->drop_table('lti_peer_assessments_rolling');
 }
 
 return TRUE;

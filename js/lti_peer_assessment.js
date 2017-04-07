@@ -62,7 +62,7 @@
 			}
 
 			if(formok === true) {
-				confirmed = bootbox.confirm("Once you have submitted you will not be able to return to this form to amend your marks.  Are you sure?",
+				confirmed = bootbox.confirm("Once you have submitted you will not be able to return to this group assessment to amend your marks.  Are you sure?",
 				function(confirmed) {
 					if(confirmed){
 							$("input[name='locked']").val('1');
