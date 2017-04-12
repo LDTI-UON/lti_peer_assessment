@@ -2,25 +2,11 @@
 # @Author: ps158
 # @Date:   2017-03-28T09:28:19+11:00
 # @Last modified by:   ps158
-# @Last modified time: 2017-04-11T14:17:36+10:00
-
+# @Last modified time: 2017-04-12T17:03:41+10:00
 
 if (!defined('BASEPATH')) {
     exit('No direct script access allowed');
 }
-
-//require_once('libraries/snippets/instructor_settings.php');
-/**
- * ExpressionEngine - by EllisLab.
- *
- * @author		ExpressionEngine Dev Team
- * @copyright	Copyright (c) 2003 - 2011, EllisLab, Inc.
- * @license		http://expressionengine.com/user_guide/license.html
- *
- * @link		http://expressionengine.com
- * @since		Version 2.0
- * @filesource
- */
 
 // ------------------------------------------------------------------------
 
@@ -561,9 +547,13 @@ private function _feedback_query($score_toggle) {
         if (!empty($this->lti_object->isInstructor)) {
             return;
         }
+        $is_preview = isset(ee()->config->_global_vars['is_preview_user']);
 
-     //$member_id =  ee() -> session -> userdata('member_id');
-     $member_id = ee()->session->userdata('member_id');
+        if($is_preview) {
+            return lang("group_preview");
+        }
+
+        $member_id = ee()->session->userdata('member_id');
 
         $mrow = $this->get_user_credentials($member_id);
 
@@ -769,6 +759,8 @@ private function removeSpaceFillers($group_name)
     {
         $resource_link_id = $this->lti_object->resource_link_id;
 
+        ee()->logger->developer("Rubric link id: ".$resource_link_id);
+
         $where = array('resource_link_id' => $resource_link_id);
         $res = ee()->db->get_where('lti_course_link_resources', $where);
 
@@ -790,9 +782,9 @@ private function removeSpaceFillers($group_name)
 
     /* Note:  if assessment has a previous then member has assessed. (test this...?)  */
 
-  private function _group_member_list_query($assessor_group_id, $member_id, $locked = FALSE) {
-//    ee()->db->save_queries = TRUE;
-  //  ee()->db->distinct();
+  private function _group_member_list_query($assessor_group_id, $member_id, $locked = FALSE, $preview = FALSE) {
+
+    ee()->db->distinct();
     ee()->db->select("lti_group_contexts.id as group_context_id,  members.member_id,
                         members.screen_name, lti_group_contexts.group_id, lti_group_contexts.group_name, lti_peer_assessments.score,
                         lti_peer_assessments.comment, lti_peer_assessments.rubric_json, lti_peer_assessments.locked, lti_peer_assessments.current");
@@ -803,21 +795,21 @@ private function removeSpaceFillers($group_name)
 
     $where = array(
                   "lti_group_contexts.group_id" => $assessor_group_id,
-                  "lti_peer_assessments.assessor_member_id" => $member_id,
                   "lti_peer_assessments.current" => TRUE
                 );
+
+    if($preview === FALSE) {
+        $where["lti_peer_assessments.assessor_member_id"] = $member_id;
+    }
 
     // exclusive query here...
     if($locked === TRUE) {
         $where["lti_peer_assessments.locked"] = "1";
     }
-    //  ee()->db->group_by("lti_peer_assessments.assessor_member_id");
+
     ee()->db->where($where);
+    $res = ee()->db->get();
 
-
-  $res = ee()->db->get();
-    //var_export(ee()->db->last_query);
-  //  ee()->db->save_queries = FALSE;
   return $res;
 }
 
@@ -832,7 +824,9 @@ private function user_has_assessed() {
 
       $assessor_group_id = $mrow->group_id;
 
-      $group_members = $this->_group_member_list_query($assessor_group_id, $member_id, TRUE);
+      $is_preview = isset(ee()->config->_global_vars['is_preview_user']);
+
+      $group_members = $this->_group_member_list_query($assessor_group_id, $member_id, TRUE, $is_preview);
 
       return $group_members->num_rows() > 0;
 }
@@ -864,14 +858,27 @@ public function form()
     $member_id = ee()->session->userdata('member_id');
     $rubric = $this->get_rubric();
 
-    $mrow = $this->get_user_credentials($member_id);
+    $is_preview = isset(ee()->config->_global_vars['is_preview_user']);
 
-    if ($mrow == null) {
-        return;
+    if(! $is_preview) {
+          $mrow = $this->get_user_credentials($member_id);
+
+          if ($mrow == null) {
+              return;
+          }
+
+          $assessor_group_id = $mrow->group_id;
+          $assessor_group_context_id = $mrow->id;
+    } else {
+          ee()->db->select(array("id","group_id"));
+          ee()->db->from("lti_group_contexts");
+          ee()->db->where(array("context_id" => 'universal'));
+          $r = ee()->db->get();
+
+          $assessor_group_id = $r->row()->group_id;
+          $assessor_group_context_id = $r->row()->id;
     }
 
-    $assessor_group_id = $mrow->group_id;
-    $assessor_group_context_id = $mrow->id;
     $save_message = '';
 
     ee()->load->helper('form');
@@ -933,7 +940,7 @@ public function form()
     }
     if ((isset($_POST['new_action']) || $action === 'retrieve') || ($action === 'assign-marks' && $_POST['locked'] == 0)) {
 
-        $results = $this->_group_member_list_query($assessor_group_id, $member_id);
+        $results = $this->_group_member_list_query($assessor_group_id, $member_id, FALSE, $is_preview);
 
         if ($results->num_rows() > 0) {
             $attributes = array('id' => 'assessments');

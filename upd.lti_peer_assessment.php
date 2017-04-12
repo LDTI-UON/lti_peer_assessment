@@ -1,4 +1,11 @@
 <?php  if ( ! defined('BASEPATH')) exit('No direct script access allowed');
+# @Author: ps158
+# @Date:   2017-03-28T09:28:19+11:00
+# @Last modified by:   ps158
+# @Last modified time: 2017-04-12T15:59:11+10:00
+
+
+
 
 /**
 * ExpressionEngine - by EllisLab
@@ -273,8 +280,87 @@ private function _alter_tables($current) {
 						$alter_instructor_settings = "ALTER TABLE  `$this->instructor_settings_table_name` DROP COLUMN `user_access`;";
 						ee()->db->query($alter_instructor_settings);
 				}
+
 }
 
+
+private function insert_sample_preview_group() {
+	$user = array("group_id" => 6);
+	$users = array();
+	$member_ids = array();
+
+	$users[] = array_merge($user, array("username" => "Ada Lovelace",
+												"username" => "__sample_ada_lovelace"));
+
+	$users[] = array_merge($user, array("screen_name" => "Daksiputra Pāṇini पाणिनि",
+												"username" => "__sample_panini"));
+
+	$users[] = array_merge($user, array("screen_name" => "Alan Turing",
+												"username" => "__sample_turing"));
+
+	$users[] = array_merge($user, array("screen_name" => "Yuen Ren Chao 趙元任",
+												"username" => "__sample_yuenrenchao"));
+
+	$users[] = array_merge($user, array("screen_name" => "Noam Chomsky",
+												"username" => "__sample_chomsky"));
+
+	$table_name = ee()->db->dbprefix("lti_group_contexts");
+	$res = ee()->db->query("SELECT MAX(group_id) as max_group_id FROM $table_name");
+	$max_group_id = $res->row()->max_group_id + 1;
+
+	$ua = array();
+	foreach($users as $i => $user) {
+			$ua[] = $user['username'];
+	}
+
+	$members_table = ee()->db->dbprefix("members");
+
+	ee()->db->select("username");
+	ee()->db->where_in("username", $ua);
+	$res = ee()->db->get("members");
+
+	if($res->num_rows() == 0) {
+						foreach($users as $user) {
+									$member_check = ee("Model")->get("Member")->filter('username', $user['username']);
+
+									$member = ee("Model")->make("Member", $user);
+									$member->save();
+									$member_ids[] = $member->member_id;
+
+									ee()->db->insert("lti_member_contexts",
+												array("member_id" => $member->member_id, "username" => $member->username)
+									);
+
+									$context_id = ee()->db->insert_id();
+
+									ee()->db->insert("lti_group_contexts",
+														array("member_id" => $member->member_id,
+																	"internal_context_id" => $context_id,
+																	"group_id" => $max_group_id,
+																	"group_name" => "Brain Power Work Group",
+																	"context_id" => "universal",
+																	"tool_consumer_instance_id" => 0)
+									);
+
+						}
+
+						ee()->db->where(array("group_id" => $max_group_id, "context_id" => 'universal'));
+						$res = ee()->db->get("lti_group_contexts");
+
+						foreach($res->result_array() as $assessor_row) {
+									foreach($res->result_array() as $row) {
+														ee()->db->insert("lti_peer_assessments",
+																			array("member_id" => $row['member_id'],
+																						"assessor_member_id" => $assessor_row['member_id'],
+																						"group_id" => $max_group_id,
+																						"group_context_id" => $row['id'])
+														);
+									}
+						}
+		}
+
+
+}
 // ----------------------------------------------------------------
 
 /**
@@ -375,14 +461,22 @@ if (version_compare($current, '0.8.35', '<')) {
 
 			$table_name = ee()->db->dbprefix("lti_peer_assessments");
 
-			$sql = "ALTER TABLE $table_name ADD `current` BOOLEAN NOT NULL DEFAULT TRUE AFTER `TMP_POST_ID`;";
-			ee()->db->query($sql);
+			$result = ee()->db->query("SHOW COLUMNS FROM `$table_name` LIKE 'current'");
+			$exists = (count($result->result()) === 1) ? TRUE : FALSE;
 
-			$sql = "ALTER TABLE $table_name ADD `previous_id` INT(11) DEFAULT NULL AFTER `current`;";
-			ee()->db->query($sql);
+			if(!$exists) {
+					$sql = "ALTER TABLE $table_name ADD `current` BOOLEAN NOT NULL DEFAULT TRUE AFTER `TMP_POST_ID`;";
+					ee()->db->query($sql);
 
+					$sql = "ALTER TABLE $table_name ADD `previous_id` INT(11) DEFAULT NULL AFTER `current`;";
+					ee()->db->query($sql);
+			}
+
+			ee()->load->dbforge();
 			ee()->dbforge->drop_table('lti_peer_assessments_rolling');
 }
+
+$this->insert_sample_preview_group();
 
 return TRUE;
 }
