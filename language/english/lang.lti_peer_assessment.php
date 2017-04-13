@@ -2,7 +2,7 @@
 # @Author: ps158
 # @Date:   2017-03-28T09:28:19+11:00
 # @Last modified by:   ps158
-# @Last modified time: 2017-04-12T16:21:39+10:00
+# @Last modified time: 2017-04-13T15:50:45+10:00
 
 
 
@@ -63,7 +63,9 @@ $lang = array(
 	 'student_table_header6' => "Unlock Submission",
 	 'student_table_header7' => "Clear Submission",
 	 'group_preview' => "Group preview for instructors",
+	 
 );
+
 
 /* End of file lang.learning_tools_integration.php */
 /* Location: /system/expressionengine/third_party/learning_tools_integration/language/english/lang.learning_tools_integration.php */

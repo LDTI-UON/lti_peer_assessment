@@ -2,14 +2,14 @@
 # @Author: ps158
 # @Date:   2017-03-28T09:28:19+11:00
 # @Last modified by:   ps158
-# @Last modified time: 2017-04-12T17:03:41+10:00
+# @Last modified time: 2017-04-13T16:01:32+10:00
 
 if (!defined('BASEPATH')) {
     exit('No direct script access allowed');
 }
 
 // ------------------------------------------------------------------------
-
+define("PREVIEW_CONTEXT", 999999999);
 /**
  * EE Learning Tools Integration Module Front End File.
  *
@@ -449,6 +449,7 @@ private function _feedback_query($score_toggle) {
         if (!empty($this->lti_object->isInstructor)) {
             return;
         }
+        $is_preview = ee()->config->_global_vars['is_preview_user'];
         $variables = array();
         $variable_row = array();
 
@@ -526,14 +527,16 @@ private function _feedback_query($score_toggle) {
         $comments_arr = array();
 
         if($comment_toggle) {
-
+          if(!$is_preview) {
               foreach($comments as $comment) {
                 if(strlen(trim($comment)) > 0) {
                   $comments_arr[] = array("comment" => $comment);
                 }
               }
-
             $variable_row['comments'] = $comments_arr;
+          } else {
+              $variable_row['comments'] = ee()->config->item("preview_comments");
+          }
         }
           }
 
@@ -547,7 +550,7 @@ private function _feedback_query($score_toggle) {
         if (!empty($this->lti_object->isInstructor)) {
             return;
         }
-        $is_preview = isset(ee()->config->_global_vars['is_preview_user']);
+        $is_preview = ee()->config->_global_vars['is_preview_user'];
 
         if($is_preview) {
             return lang("group_preview");
@@ -824,7 +827,7 @@ private function user_has_assessed() {
 
       $assessor_group_id = $mrow->group_id;
 
-      $is_preview = isset(ee()->config->_global_vars['is_preview_user']);
+      $is_preview = ee()->config->_global_vars['is_preview_user'];
 
       $group_members = $this->_group_member_list_query($assessor_group_id, $member_id, TRUE, $is_preview);
 
@@ -858,7 +861,7 @@ public function form()
     $member_id = ee()->session->userdata('member_id');
     $rubric = $this->get_rubric();
 
-    $is_preview = isset(ee()->config->_global_vars['is_preview_user']);
+    $is_preview = ee()->config->_global_vars['is_preview_user'];
 
     if(! $is_preview) {
           $mrow = $this->get_user_credentials($member_id);
@@ -917,7 +920,7 @@ public function form()
 
             ee()->db->where(array('TMP_POST_ID' => $student_id, 'assessor_member_id' => $member_id));
             $rubric_json = !empty($row['rubric_json']) ? $row['rubric_json'] : '';
-            $locked = ee()->input->post('locked');
+            $locked = $is_preview ? FALSE : ee()->input->post('locked');
             ee()->db->update($form_table_name, array('score' => $row['score'], 'comment' => $row['comment'], 'rubric_json' => $rubric_json, 'locked' => $locked, 'current' => ! $locked, 'TMP_POST_ID' => null));
 
             $total_affected +=  ee()->db->affected_rows();
@@ -949,8 +952,16 @@ public function form()
             . form_hidden('locked', '0');
 
           $table_rows = array();
+          $r_array = $results->result_array();
 
-            foreach ($results->result_array() as $asmrow) {
+          if($is_preview) {
+              $preview_user = ee()->config->item('preview_user');
+              $preview_user["group_context_id"] = PREVIEW_CONTEXT;
+              $preview_user['member_id'] = $this->lti_object->member_id;
+              $r_array[] = $preview_user;
+          }
+
+          foreach ($r_array as $asmrow) {
                 $render_row = ($allow_self_assessment == 1 || $asmrow['member_id'] != $member_id);
 
                 if ($render_row) {
@@ -974,38 +985,38 @@ public function form()
 
                         $peer_res = ee()->db->get_where($form_table_name, $where);
 
-                        if ($peer_res->num_rows() == 0) {
-                            /* if instructor has unlocked previous assessment : */
-                            $where = array('assessor_member_id' => $member_id,
-                                              'group_id' => $assessor_group_id,
-                                              'group_context_id' => $asmrow['group_context_id'],
-                                              'member_id' => $asmrow['member_id'],
-                                              'current' => 0, 'locked' => 0);
-
-                            ee()->db->where($where);
-
-                            $peer_res = ee()->db->get_where($form_table_name, $where);
-
+                        if($asmrow['group_context_id'] !== PREVIEW_CONTEXT) {
                                 if ($peer_res->num_rows() == 0) {
-                                    // create a new assessment
-                                      $insert_data = array_merge($where, $data);
-                                      ee()->db->insert($form_table_name, $insert_data);
-                                      $reload = TRUE;
-                                } else {
-                                   // update existing row
-                                   $data['current'] = 1;
+                                    /* if instructor has unlocked previous assessment : */
+                                    $where = array('assessor_member_id' => $member_id,
+                                                      'group_id' => $assessor_group_id,
+                                                      'group_context_id' => $asmrow['group_context_id'],
+                                                      'member_id' => $asmrow['member_id'],
+                                                      'current' => 0, 'locked' => 0);
+
                                     ee()->db->where($where);
-                                    ee()->db->update($form_table_name, $data);
 
-                                    $reload = TRUE;
+                                    $peer_res = ee()->db->get_where($form_table_name, $where);
+
+                                        if ($peer_res->num_rows() == 0) {
+                                            // create a new assessment
+                                              $insert_data = array_merge($where, $data);
+                                              ee()->db->insert($form_table_name, $insert_data);
+                                              $reload = TRUE;
+                                        } else {
+                                           // update existing row
+                                           $data['current'] = 1;
+                                            ee()->db->where($where);
+                                            ee()->db->update($form_table_name, $data);
+
+                                            $reload = TRUE;
+                                        }
+                                } else {
+                                  // update existing row
+                                     ee()->db->where($where);
+                                     ee()->db->update($form_table_name, $data);
                                 }
-                        } else {
-                          // update existing row
-                             ee()->db->where($where);
-                             ee()->db->update($form_table_name, $data);
-                        }
-
-
+                      }
 
                     if($asmrow['current'] == TRUE) {
                       $row = array();
@@ -1040,7 +1051,7 @@ public function form()
                 }
             }
 
-            if(isset($reload)) {
+            if(!$is_preview && isset($reload)) {
               ee()->db->where(array('assessor_member_id' => $member_id, 'group_id' => $assessor_group_id));
               $res = ee()->db->get($form_table_name);
 
@@ -1990,7 +2001,7 @@ public function download_csv()
 
             //echo "<b>Count: ".count($totals)."</b>";
             if (count($totals) > 0) {
-                fputcsv($handle, array('One-off peer assessment'));
+                fputcsv($handle, array($this->lti_object->course_name.' peer assessments'));
 
                 fputcsv($handle, array('Full Name', 'Student No', 'Group No', 'Group Name', 'Mean Score', 'Multiplier', 'No of Group Members', 'No Assessed this Student', 'Comments'));
 
