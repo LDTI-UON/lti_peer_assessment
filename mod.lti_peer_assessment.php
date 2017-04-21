@@ -2,7 +2,7 @@
 # @Author: ps158
 # @Date:   2017-03-28T09:28:19+11:00
 # @Last modified by:   ps158
-# @Last modified time: 2017-04-13T16:01:32+10:00
+# @Last modified time: 2017-04-19T14:43:02+10:00
 
 if (!defined('BASEPATH')) {
     exit('No direct script access allowed');
@@ -748,8 +748,6 @@ private function removeSpaceFillers($group_name)
                 $variable_row['submit_button'] .= "<span style='color: #00748b'>$saved</span>";
             }
             $variable_row['form_close'] = form_close();
-
-              $variables[] = $variable_row;
         }
 
       $variable_row['chosen_css'] = ee()->config->item("chosen_css");

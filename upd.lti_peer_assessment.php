@@ -2,7 +2,7 @@
 # @Author: ps158
 # @Date:   2017-03-28T09:28:19+11:00
 # @Last modified by:   ps158
-# @Last modified time: 2017-04-12T15:59:11+10:00
+# @Last modified time: 2017-04-21T12:49:52+10:00
 
 
 
@@ -33,7 +33,7 @@
 
 class Lti_peer_assessment_upd {
 
-public $version = '0.8.35'; #build version#
+public $version = '0.8.4'; #build version#
 public $mod_class = 'Lti_peer_assessment';
 
 private $EE;

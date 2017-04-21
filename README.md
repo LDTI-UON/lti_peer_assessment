@@ -1,21 +1,21 @@
 # README #
 
 ## Peer Assessment plugin for ExpressionEngine(EE) 3 ##
-** Version 0.8.29 **
 
 Provides a form that allows students to grade other group members' contributions. Instructors download an Excel report that provides a full breakdown and mean score of all group members' peer review.
 
-This plugin requires the [EE3 LTI Module](https://bitbucket.org/sijpkes/ee3-lti-module) ~~and [EE3 LTI Extension Hooks](https://bitbucket.org/sijpkes/ee3-lti-extension-hooks)~~.
+This plugin requires [EE3 Learning Tools Integration](https://github.com/BOLDLab/learning_tools_integration)
+
+## New in Version 0.8.4 ##
+Added instructor preview group.  This provides the same group for every course instructor as an example when accessing via student preview in Blackboard Learn<sup>&copy;</sup>.
 
 ## Quick Setup Guide ##
 
-* Download [EE3 LTI Module](https://bitbucket.org/sijpkes/ee3-lti-module) ~~and [EE3 LTI Extension Hooks](https://bitbucket.org/sijpkes/ee3-lti-extension-hooks)~~
+* Download [EE3 Learning Tools Integration](https://github.com/BOLDLab/learning_tools_integration)
 * Install using the [EE3 add-on installation instructions](https://docs.expressionengine.com/latest/cp/addons/index.html).
 
 ## EE Tags Provided ##
-
-#!html
-
+```
 {exp:lti_peer_assessment:feedback}
 
       {total} <!-- total mean score given by all peers -->
@@ -34,10 +34,7 @@ This plugin requires the [EE3 LTI Module](https://bitbucket.org/sijpkes/ee3-lti-
 {/exp:lti_peer_assessment:feedback}
 ```
 
-
 ```
-#!html
-
 {exp:lti_peer_assessment:settings}
 ```
 Allows super users to change settings for peer review/assessment, available settings are:
@@ -50,7 +47,7 @@ Allows super users to change settings for peer review/assessment, available sett
 
 
 ```
-#!html
+
 
 {exp:lti_peer_assessment:max_grade}
 ```
@@ -59,8 +56,6 @@ Get maximum score for assessment derived from rubric or added in settings.
 
 
 ```
-#!html
-
 {exp:lti_peer_assessment:form}
       {has_rubric} <!-- conditional to check if this assessment has a rubric.-->
 
@@ -83,18 +78,13 @@ Get maximum score for assessment derived from rubric or added in settings.
 Renders a table containing all group members and input fields for score, comments.  Any attached rubric will replace the score text input field automagically with a button to open that rubric.
 
 ```
-#!html
-
 {exp:lti_peer_assessment:download_excel}
 ```
 
 Download an excel report for instructors containing a breakdown of all peer-assessed students.
 
 ```
-#!html
-
 {exp:lti_peer_assessment:help_link section='section_name' [sub_section='sub_section']}
-
 ```
 Provides contextual help for most of the above features. Configuration for this is in the `help_links.ini` file.
 

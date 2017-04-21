@@ -55,8 +55,7 @@
 				</div>
 				{/if}
 
-	{exp:learning_tools_integration
-		prev_link_url='//localhost:9876/images/ci/ng/small_previous.gif' next_link_url='//uonline.newcastle.edu.au/images/ci/ng/small_next.gif' 		 	first_link_url='//uonline.newcastle.edu.au/images/ci/ng/small_rewind.gif' last_link_url='//uonline.newcastle.edu.au/images/ci/ng/small_ffwd.gif' 		plugins='lti_peer_assessment'} <!-- {css_link_tags} --> <!-- imported from LMS -->
+	{exp:learning_tools_integration plugins='lti_peer_assessment'} <!-- {css_link_tags} --> <!-- imported from LMS -->
 	{if error_messages != ""} {error_messages} {/if}
 	{if logged_in_username}
 
