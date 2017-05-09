@@ -2,7 +2,7 @@
 # @Author: ps158
 # @Date:   2017-03-28T09:28:19+11:00
 # @Last modified by:   ps158
-# @Last modified time: 2017-04-19T14:43:02+10:00
+# @Last modified time: 2017-05-04T09:59:22+10:00
 
 if (!defined('BASEPATH')) {
     exit('No direct script access allowed');
@@ -257,25 +257,25 @@ class Lti_peer_assessment
         return $plugin_settings;
     }
 
-    private function get_score_column_setting($str = '')
+    private function get_score_column_setting()
     {
         $plugin_settings = $this->_get_plugin_settings_array();
 
         $score = '';
         if (!empty($plugin_settings['show_grade_column'])) {
-            $score = "lti_peer_assessments$str.score,";
+            $score = "lti_peer_assessments.score,";
         }
 
         return $score;
     }
 
-    private function get_comment_column_setting($str = '')
+    private function get_comment_column_setting()
     {
         $plugin_settings = $this->_get_plugin_settings_array();
 
         $comment = '';
         if (!empty($plugin_settings['show_comments'])) {
-            $comment = "lti_peer_assessments$str.comment,";
+            $comment = "lti_peer_assessments.comment,";
         }
 
         return $comment;
@@ -760,7 +760,7 @@ private function removeSpaceFillers($group_name)
     {
         $resource_link_id = $this->lti_object->resource_link_id;
 
-        ee()->logger->developer("Rubric link id: ".$resource_link_id);
+        //ee()->logger->developer("Rubric link id: ".$resource_link_id);
 
         $where = array('resource_link_id' => $resource_link_id);
         $res = ee()->db->get_where('lti_course_link_resources', $where);
@@ -919,7 +919,7 @@ public function form()
             ee()->db->where(array('TMP_POST_ID' => $student_id, 'assessor_member_id' => $member_id));
             $rubric_json = !empty($row['rubric_json']) ? $row['rubric_json'] : '';
             $locked = $is_preview ? FALSE : ee()->input->post('locked');
-            ee()->db->update($form_table_name, array('score' => $row['score'], 'comment' => $row['comment'], 'rubric_json' => $rubric_json, 'locked' => $locked, 'current' => ! $locked, 'TMP_POST_ID' => null));
+            ee()->db->update($form_table_name, array('score' => $row['score'], 'comment' => $row['comment'], 'rubric_json' => $rubric_json, 'resource_link_id' => $this->lti_object->resource_link_id, 'locked' => $locked, 'current' => ! $locked, 'TMP_POST_ID' => null));
 
             $total_affected +=  ee()->db->affected_rows();
         }
@@ -998,6 +998,7 @@ public function form()
 
                                         if ($peer_res->num_rows() == 0) {
                                             // create a new assessment
+                                              $data['resource_link_id'] = $this->lti_object->resource_link_id;
                                               $insert_data = array_merge($where, $data);
                                               ee()->db->insert($form_table_name, $insert_data);
                                               $reload = TRUE;
@@ -2039,7 +2040,7 @@ private function get_report_query($member_id = NULL, $order_by = NULL)
 {
     $type = ee()->TMPL->fetch_param('type', 'single');
 
-    $where_array = array("lti_member_contexts.context_id" => $this->lti_object->context_id, "lti_member_contexts.tool_consumer_instance_id" => $this->lti_object->tool_consumer_instance_id);
+    $where_array = array("lti_member_contexts.context_id" => $this->lti_object->context_id, "lti_member_contexts.tool_consumer_instance_id" => $this->lti_object->tool_consumer_instance_id, "lti_peer_assessments.resource_link_id" => $this->lti_object->resource_link_id);
 
     if($order_by == NULL) {
         $order_by_str = "lti_group_contexts.group_name";
@@ -2337,6 +2338,28 @@ private function get_latest_peer_assessment($member_id = NULL) {
         return 0;
     }
 
+    private function indiv_mean($total, $assessors) {
+      $only_non_zero = array();
+      $indiv_total = 0;
+      $mean = 0;
+
+      foreach ($assessors as $rating) {
+          if($rating > 0) {
+                $indiv_total += $rating;
+                array_push($only_non_zero, $rating);
+          }
+      }
+
+      $members = count($only_non_zero);
+
+      if($members > 0) {
+          $mean = $indiv_total / $members;
+          $mean = round($mean, 0, PHP_ROUND_HALF_DOWN);
+      }
+
+      return $mean;
+    }
+
     private function group_mean($group_totals)
     {
         $group_total = 0;
@@ -2346,10 +2369,6 @@ private function get_latest_peer_assessment($member_id = NULL) {
         }
 
         $members = count($group_totals);
-
-        if(! $this->include_self_in_mean_score)  {
-            $members = $members - 1;
-        }
 
         if($members > 0) {
             $mean = $group_total / $members;
@@ -2367,6 +2386,9 @@ private function instructor_report(&$max_assessors = 0)
 {
     $results = $this->get_report_query();
     $max_score = $this->get_score_setting();
+
+    $settings = $this->_get_plugin_settings_array();
+    $this->include_self_in_mean_score = $settings['include_self_in_mean_score'];
 
     $csv_rows = array();
     $members_assessed_this_student = array();
@@ -2389,47 +2411,36 @@ private function instructor_report(&$max_assessors = 0)
         $amr = NULL;
         if($res->num_rows() === 1) {
 
-          ee()->logger->developer("row count: ? ".$res->num_rows());
-          ee()->logger->developer(var_export($res, TRUE));
-
           $amr = $res->row();
         }
         if($amr !== NULL) {
-        if (!$this->include_self_in_mean_score && isset($amr->member_id) && $amr->member_id != $row['member_id']) {
-            $assessor_member_name = $amr->screen_name.' ('.$amr->username.')';
-            $assessor_member_name .= chr(13).' Gave mark: '.$row['score'].chr(13).chr(13);
 
-            $score = $row['score'];
-            if (array_key_exists($row['member_id'], $csv_rows)) {
-                    if ($score > 0) {
-                        $members_assessed_this_student[$row['member_id']] += 1;  // count assessments (not all members may assess)
-                        $max_assessors = $members_assessed_this_student[$row['member_id']] > $max_assessors ? $members_assessed_this_student[$row['member_id']] : $max_assessors;
+                      $assessor_member_name = $amr->screen_name.' ('.$amr->username.')';
+                      $assessor_member_name .= chr(13).' Gave mark: '.$row['score'].chr(13).chr(13);
 
-                        $totals[$row['member_id']] += $score;
+                      if (!array_key_exists($row['member_id'], $csv_rows)) {
+                            $members_assessed_this_student[$row['member_id']] = 1;
+                            $totals[$row['member_id']] = 0;
+                            $peer_ratings[$row['group_id']][$row['member_id']] = array();
+                            $csv_rows[$row['member_id']] = array($row['screen_name'], $row['username'], $row['group_id'], $row['group_name'], 0,
+                                    0, $group_counts[$row['group_id']], 1, chr(13).'---------------'.chr(13).$assessor_member_name."Comment:".chr(13).$row['comment'].chr(13).'---------------'.chr(13));
+                      }
 
-                        $peer_ratings[$row['group_id']][$row['member_id']] = $score;
+                    $score = $row['score'];
+                    $members_assessed_this_student[$row['member_id']] = $members_assessed_this_student[$row['member_id']] + 1;  // count assessments (not all members may assess)
+                    $max_assessors = $members_assessed_this_student[$row['member_id']] > $max_assessors ? $members_assessed_this_student[$row['member_id']] : $max_assessors;
 
-                        // for SPA calcualtion
-                        $group_totals[$row['group_id']][$row['member_id']] = $totals[$row['member_id']];
+                    $totals[$row['member_id']] = $totals[$row['member_id']] + $score;
 
-                        $csv_rows[$row['member_id']][8] .= $assessor_member_name."Comment: ".chr(13).$row['comment'].chr(13).'---------------'.chr(13);
-                  }
-            } else {
-                if ($score > 0) {
-                    $members_assessed_this_student[$row['member_id']] = 1;
-                    $totals[$row['member_id']] = $score;
 
-                    $csv_rows[$row['member_id']] = array($row['screen_name'], $row['username'], $row['group_id'], $row['group_name'], 0,
-                                0, $group_counts[$row['group_id']], 1, chr(13).'---------------'.chr(13).$assessor_member_name."Comment:".chr(13).$row['comment'].chr(13).'---------------'.chr(13));
-                  } else {
-                    $members_assessed_this_student[$row['member_id']] = 0;
-                    $totals[$row['member_id']] = 0;
+                    $peer_ratings[$row['group_id']][$row['member_id']][] = $score;
 
-                    $csv_rows[$row['member_id']] = array($row['screen_name'], $row['username'], $row['group_id'], $row['group_name'], 0,
-                            0, $group_counts[$row['group_id']], 1, chr(13).'---------------'.chr(13).$assessor_member_name."Comment:".chr(13).$row['comment'].chr(13).'---------------'.chr(13));
-                  }
-            }
-        }
+                    // for SPA calcualtion
+                    $group_totals[$row['group_id']][$row['member_id']] = $totals[$row['member_id']];
+
+                    $csv_rows[$row['member_id']][8] .= $assessor_member_name."Comment: ".chr(13).$row['comment'].chr(13).'---------------'.chr(13);
+
+
       }
     }
 
