@@ -24,7 +24,7 @@ $(document).ready(function() {
           }
 
           if($("input[name='include_self_in_mean_score'][type='hidden']").length === 0) {
-              $("input[name='include_self_in_mean_score'][value='no'][type='radio']").prop('checked', true).after("<input type='hidden' name='include_self_in_mean_score' value='no'/>");
+              $("input[name='include_self_in_mean_score'][value='yes'][type='radio']").prop('checked', true).after("<input type='hidden' name='include_self_in_mean_score' value='yes'/>");
           }
 
           $("input[name='allow_self_assessment'][type='radio'], input[name='include_self_in_mean_score'][type='radio']").prop('disabled', true);

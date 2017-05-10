@@ -33,7 +33,7 @@
 
 class Lti_peer_assessment_upd {
 
-public $version = '0.8.4'; #build version#
+public $version = '0.9'; #build version#
 public $mod_class = 'Lti_peer_assessment';
 
 private $EE;
@@ -49,7 +49,7 @@ public function __construct()
 {
 $this->instructor_settings_table_name = ee()->db->dbprefix("lti_instructor_settings");
 $this->course_link_resources_table_name = ee()->db->dbprefix("lti_course_link_resources");
-$this->lti_peer_assessment_table_name = ee()->db->dbprefix("lti_peer_assessment");
+$this->lti_peer_assessment_table_name = ee()->db->dbprefix("lti_peer_assessments");
 }
 
 // ----------------------------------------------------------------
@@ -281,6 +281,13 @@ private function _alter_tables($current) {
 						ee()->db->query($alter_instructor_settings);
 				}
 
+				$result = ee()->db->query("SHOW COLUMNS FROM `$this->lti_peer_assessment_table_name` LIKE 'resource_link_id'");
+				$exists = (count($result->result()) === 1) ? TRUE : FALSE;
+
+				if( ! $exists ) {
+					$alter_peer_assessments = "ALTER TABLE  `$this->lti_peer_assessment_table_name` ADD `resource_link_id` CHAR(25);";
+					ee()->db->query($alter_peer_assessments);
+				}
 }
 
 
@@ -442,8 +449,9 @@ return TRUE;
 */
 public function update($current = '')
 {
-$this->_alter_tables($current);
-
+if (version_compare($current, '0.9', '<')) {
+		$this->_alter_tables($current);
+}
 if (version_compare($current, '0.8.35', '<')) {
 			$data = array (
 					'class' => $this->mod_class,

@@ -152,6 +152,8 @@ class Lti_peer_assessment
               if (ee()->TMPL->fetch_param('help_glyph_class')) {
                   $this->help_glyph_class = ee()->TMPL->fetch_param('help_glyph_class');
               }
+
+        static::$plugin_settings = $this->_get_plugin_settings_array();
       }
 
     if (empty(static::$apeg_url)) {
@@ -244,10 +246,10 @@ class Lti_peer_assessment
                 if (count($unser) > 0) {
                     $plugin_settings = $unser[$this->module_name];
 
-            // default settings only include one field
-            if (count(array_keys($unser[$this->module_name])) == 1) {
-                $this->set_instructor_settings(static::$plugin_settings);
-            }
+                        // default settings only include one field
+                        if (count(array_keys($unser[$this->module_name])) == 1) {
+                            $this->set_instructor_settings(static::$plugin_settings);
+                        }
                 } else {
                     $this->set_instructor_settings($plugin_settings);
                 }
@@ -437,12 +439,12 @@ private function _feedback_query($score_toggle) {
         ee()->db->join('lti_member_contexts', 'lti_group_contexts.internal_context_id = lti_member_contexts.id');
         ee()->db->join('members', 'members.member_id = lti_member_contexts.member_id');
         ee()->db->join("lti_peer_assessments", "lti_peer_assessments.group_context_id = lti_group_contexts.id", 'left outer');
-        ee()->db->where(array('lti_group_contexts.group_id' => $assessor_group_id, "lti_peer_assessments.member_id" => $member_id, "lti_peer_assessments.locked"=> '1'));
+        ee()->db->where(array('lti_group_contexts.group_id' => $assessor_group_id, "lti_peer_assessments.member_id" => $member_id, "lti_peer_assessments.resource_link_id" => $this->lti_object->resource_link_id, "lti_peer_assessments.locked"=> '1'));
 
         $results = ee()->db->get();
 
         return $results;
-    }
+  }
 
     public function feedback()
     {
@@ -2419,11 +2421,11 @@ private function instructor_report(&$max_assessors = 0)
                       $assessor_member_name .= chr(13).' Gave mark: '.$row['score'].chr(13).chr(13);
 
                       if (!array_key_exists($row['member_id'], $csv_rows)) {
-                            $members_assessed_this_student[$row['member_id']] = 1;
+                            $members_assessed_this_student[$row['member_id']] = 0;
                             $totals[$row['member_id']] = 0;
                             $peer_ratings[$row['group_id']][$row['member_id']] = array();
                             $csv_rows[$row['member_id']] = array($row['screen_name'], $row['username'], $row['group_id'], $row['group_name'], 0,
-                                    0, $group_counts[$row['group_id']], 1, chr(13).'---------------'.chr(13).$assessor_member_name."Comment:".chr(13).$row['comment'].chr(13).'---------------'.chr(13));
+                                    0, $group_counts[$row['group_id']], 1, "");
                       }
 
                     $score = $row['score'];
