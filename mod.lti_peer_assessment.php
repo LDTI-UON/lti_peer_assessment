@@ -439,7 +439,10 @@ private function _feedback_query($score_toggle) {
         ee()->db->join('lti_member_contexts', 'lti_group_contexts.internal_context_id = lti_member_contexts.id');
         ee()->db->join('members', 'members.member_id = lti_member_contexts.member_id');
         ee()->db->join("lti_peer_assessments", "lti_peer_assessments.group_context_id = lti_group_contexts.id", 'left outer');
-        ee()->db->where(array('lti_group_contexts.group_id' => $assessor_group_id, "lti_peer_assessments.member_id" => $member_id, "lti_peer_assessments.resource_link_id" => $this->lti_object->resource_link_id, "lti_peer_assessments.locked"=> '1'));
+        ee()->db->where(array('lti_group_contexts.group_id' => $assessor_group_id,
+                            "lti_peer_assessments$str.member_id" => $member_id,
+                              "lti_peer_assessments$str.resource_link_id" => $this->lti_object->resource_link_id,
+                              "lti_peer_assessments$str.locked"=> '1'));
 
         $results = ee()->db->get();
 
@@ -807,7 +810,8 @@ private function removeSpaceFillers($group_name)
 
     // exclusive query here...
     if($locked === TRUE) {
-        $where["lti_peer_assessments.locked"] = "1";
+        $where["lti_peer_assessments$str.locked"] = "1";
+        $where["lti_peer_assessments$str.resource_link_id"] = $this->lti_object->resource_link_id;
     }
 
     ee()->db->where($where);
@@ -944,15 +948,26 @@ public function form()
     if ((isset($_POST['new_action']) || $action === 'retrieve') || ($action === 'assign-marks' && $_POST['locked'] == 0)) {
 
         $results = $this->_group_member_list_query($assessor_group_id, $member_id, FALSE, $is_preview);
+        // remove duplicates
+        $dupes = array();
+        $array = $results->result_array();
 
-        if ($results->num_rows() > 0) {
+        foreach($array as $key => $row) {
+          if($row['resource_link_id'] != $this->lti_object->resource_link_id) {
+              unset($array[$key]);
+          }
+        }
+
+        $lock_count = 0;
+
+        if (count($array) > 0) {
             $attributes = array('id' => 'assessments');
             $variable_row['form_open'] = form_open_multipart(static::$apeg_url.'/'.ee()->uri->uri_string(), $attributes);
             $variable_row['form_open'] .= form_hidden('assess_action', 'assign-marks')
             . form_hidden('locked', '0');
 
           $table_rows = array();
-          $r_array = $results->result_array();
+          $r_array = $array; //$results->result_array();
 
           if($is_preview) {
               $preview_user = ee()->config->item('preview_user');
@@ -1083,6 +1098,7 @@ public function form()
               exit();
             }
 
+            $variable_row['user_has_assessed'] = $this->user_has_assessed($rolling);
             $variable_row['self_assessment_allowed'] = $allow_self_assessment;
             $variable_row['table_row_count'] = count($table_rows);
             $variable_row['table_rows'] = $table_rows;
@@ -1107,8 +1123,6 @@ public function form()
             $variable_row['message'] = 'You are not registered for peer assessment, please check with your Lecturer.';
         }
     }
-
-
 
     $vars = array();
     $vars['form'] = $form;
