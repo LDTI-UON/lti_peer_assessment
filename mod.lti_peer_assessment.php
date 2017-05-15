@@ -950,11 +950,15 @@ public function form()
         $results = $this->_group_member_list_query($assessor_group_id, $member_id, FALSE, $is_preview);
         // remove duplicates
         $dupes = array();
-        $array = $results->result_array();
+        $raw_array = $results->result_array();
+        $array = $raw_array;
 
         foreach($array as $key => $row) {
-          if($row['resource_link_id'] != $this->lti_object->resource_link_id) {
+          if($row['resource_link_id'] != $this->lti_object->resource_link_id ||
+          in_array($row['member_id'], $dupes) ) {
               unset($array[$key]);
+          } else {
+              array_push($dupes, $row['member_id']);
           }
         }
 
