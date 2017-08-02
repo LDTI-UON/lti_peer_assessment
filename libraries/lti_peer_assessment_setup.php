@@ -45,7 +45,7 @@ $lonely_users = array();
                     break;
                 }
 
-                $peer_data = array('group_context_id' => $group_data -> id, 'assessor_member_id' => $assessing_member['member_id'], 'member_id' => $group_member['member_id']);
+                $peer_data = array('group_context_id' => $group_data -> id, 'assessor_member_id' => $assessing_member['member_id'], 'member_id' => $group_member['member_id'], 'resource_link_id' => $this->parent_object->resource_link_id);
                 $sanity =  ee() -> db -> get_where('lti_peer_assessments', $peer_data);
 
                 if ($sanity -> num_rows() == 0) {

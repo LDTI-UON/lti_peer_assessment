@@ -379,8 +379,8 @@ class Lti_peer_assessment
         $array['zip_path'] = $cache_path.$course_upload_dir.DIRECTORY_SEPARATOR.'rubrics'.DIRECTORY_SEPARATOR.'zip'.DIRECTORY_SEPARATOR;
 
         if (file_exists($path)) {
-          $data_file = file_get_contents($path);
-          $array = array_merge($array, unserialize($data_file));
+            $data_file = file_get_contents($path);
+            $array = array_merge($array, unserialize($data_file));
         }
 
         if (!file_exists($array['cache_path'])) {
@@ -440,9 +440,9 @@ private function _feedback_query($score_toggle) {
         ee()->db->join('members', 'members.member_id = lti_member_contexts.member_id');
         ee()->db->join("lti_peer_assessments", "lti_peer_assessments.group_context_id = lti_group_contexts.id", 'left outer');
         ee()->db->where(array('lti_group_contexts.group_id' => $assessor_group_id,
-                            "lti_peer_assessments$str.member_id" => $member_id,
-                              "lti_peer_assessments$str.resource_link_id" => $this->lti_object->resource_link_id,
-                              "lti_peer_assessments$str.locked"=> '1'));
+                            "lti_peer_assessments.member_id" => $member_id,
+                              "lti_peer_assessments.resource_link_id" => $this->lti_object->resource_link_id,
+                              "lti_peer_assessments.locked"=> '1'));
 
         $results = ee()->db->get();
 
@@ -793,7 +793,7 @@ private function removeSpaceFillers($group_name)
     ee()->db->distinct();
     ee()->db->select("lti_group_contexts.id as group_context_id,  members.member_id,
                         members.screen_name, lti_group_contexts.group_id, lti_group_contexts.group_name, lti_peer_assessments.score,
-                        lti_peer_assessments.comment, lti_peer_assessments.rubric_json, lti_peer_assessments.locked, lti_peer_assessments.current");
+                        lti_peer_assessments.comment, lti_peer_assessments.rubric_json, lti_peer_assessments.resource_link_id, lti_peer_assessments.locked, lti_peer_assessments.current");
     ee()->db->from("lti_group_contexts", "lti_peer_assessments");
     ee()->db->join("lti_member_contexts", "lti_group_contexts.internal_context_id = lti_member_contexts.id");
     ee()->db->join("members", "members.member_id = lti_member_contexts.member_id");
@@ -801,7 +801,8 @@ private function removeSpaceFillers($group_name)
 
     $where = array(
                   "lti_group_contexts.group_id" => $assessor_group_id,
-                  "lti_peer_assessments.current" => TRUE
+                  "lti_peer_assessments.current" => TRUE,
+
                 );
 
     if($preview === FALSE) {
@@ -810,8 +811,8 @@ private function removeSpaceFillers($group_name)
 
     // exclusive query here...
     if($locked === TRUE) {
-        $where["lti_peer_assessments$str.locked"] = "1";
-        $where["lti_peer_assessments$str.resource_link_id"] = $this->lti_object->resource_link_id;
+        $where["lti_peer_assessments.locked"] = "1";
+
     }
 
     ee()->db->where($where);
@@ -2549,15 +2550,18 @@ private function instructor_report(&$max_assessors = 0)
         $str = $this->_get_last_assessment_ids($member_id, $group_id);
         $this->_clear_pointer_to_current($member_id, $group_id);
 
-        ee()->db->where("`id` IN $str");
-        ee()->db->update('lti_peer_assessments',
-                    array('locked' => 0,
-                          'rubric_json' => NULL,
-                          'score' => 0,
-                          'comment' => '',
-                          'current' => 1));
+        if(strlen(trim($str)) > 0) {
+          ee()->db->where("`id` IN $str");
+          ee()->db->update('lti_peer_assessments',
+                      array('locked' => 0,
+                            'rubric_json' => NULL,
+                            'score' => 0,
+                            'comment' => '',
+                            'current' => 1));
 
-        $affected += ee()->db->affected_rows();
+          $affected += ee()->db->affected_rows();
+        }
+
 
         echo json_encode(array("rows_affected" => $affected));
         exit();
