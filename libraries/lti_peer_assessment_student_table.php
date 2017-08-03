@@ -5,7 +5,7 @@
 # @Last modified time: 2017-04-12T11:27:04+10:00
 
 
-
+$resource_link_id = ee()->config->_global_vars['resource_link_id'];
 
 // takes $row as input
 if(!array_key_exists('student_table_plugin_headers', $vars)) {
@@ -37,8 +37,8 @@ if(!array_key_exists($plugin, $vars['student_table_actions'])) {
       $vars['student_table_actions'][$plugin]['clear_last_submission'] = $action_id;
 }
 
-$vars['students'][$row['member_id']]['lti_peer_assessment_unlock'] = "<button class='$this->button_class lti_peer_assessment_unlock' data-id='$row[member_id]' data-cxt='$row[group_id]'>Unlock</button>";
+$vars['students'][$row['member_id']]['lti_peer_assessment_unlock'] = "<button class='$this->button_class lti_peer_assessment_unlock' data-id='$row[member_id]' data-cxt='$row[group_id]' data-resource-link-id='$resource_link_id'>Unlock</button>";
 
 if(ee()->session->userdata('group_id') == 1) {
-    $vars['students'][$row['member_id']]['lti_peer_assessment_clear'] = "<button class='$this->button_class btn-danger lti_peer_assessment_clear' data-id='$row[member_id]' data-cxt='$row[group_id]'>Clear</button>";
+    $vars['students'][$row['member_id']]['lti_peer_assessment_clear'] = "<button class='$this->button_class btn-danger lti_peer_assessment_clear' data-id='$row[member_id]' data-cxt='$row[group_id]' data-resource-link-id='$resource_link_id'>Clear</button>";
 }
