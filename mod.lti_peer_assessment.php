@@ -622,7 +622,7 @@ private function removeSpaceFillers($group_name)
 
         $plugin_settings = $this->_get_plugin_settings_array();
 
-        if (isset($_POST['show_grade_column'])) {
+        if (isset($_POST['total_score'])) {
             $plugin_settings['show_grade_column'] = $show_grade_column;
             $plugin_settings['show_comments'] = $show_comments;
             $plugin_settings['allow_self_assessment'] = $allow_self_assessment;
@@ -914,7 +914,7 @@ public function form()
 
     $is_preview = ee()->config->_global_vars['is_preview_user'];
 
-    //echo "IS PREVIEW? [$is_preview]";
+
 
     if(! $is_preview) {
           $mrow = $this->get_user_credentials($member_id);
