@@ -8,8 +8,8 @@ $(".lti_peer_assessment_unlock").bind("click", function(e) {
       id: id,
       cxt: cxt,
       rli: rli
-  }, function(d) {
-      var d = JSON.parse(d);
+  }, function(r) {
+      var d = JSON.parse(r);
       if(d.rows_affected > 0) {
             bootbox.alert("The student can now access their last assessment again.");
       } else {
@@ -29,8 +29,8 @@ $(".lti_peer_assessment_clear").bind("click", function(e) {
       id: id,
       cxt: cxt,
       rli: rli
-    }, function(d) {
-      var d = JSON.parse(d);
+    }, function(r) {
+      var d = JSON.parse(r);
       if(d.rows_affected > 0) {
             bootbox.alert("The student's submissions were deleted.");
       } else {

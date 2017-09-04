@@ -4,6 +4,17 @@
 # @Last modified by:   ps158
 # @Last modified time: 2017-05-04T09:59:22+10:00
 
+/*
+Note on TESTING in production, for debug purposes (I know this is unorthodox but unfortunately necessary sometimes).
+To output for testing, just add a testing parameter to the custom launch params:
+eg.
+
+if(isset($_REQUEST['custom_testing'])) {
+      $row["group_member_screen_name"] = $asmrow['screen_name']." $asmrow[member_id]";
+}
+
+*/
+
 if (!defined('BASEPATH')) {
     exit('No direct script access allowed');
 }
@@ -972,8 +983,6 @@ public function form()
 
     $is_preview = ee()->config->_global_vars['is_preview_user'];
 
-
-
     if(! $is_preview) {
           $mrow = $this->get_user_credentials($member_id);
 
@@ -1097,7 +1106,8 @@ public function form()
           }
 
           foreach ($r_array as $asmrow) {
-                $render_row = ($allow_self_assessment == 1 || $asmrow['member_id'] !== $member_id);
+
+                $render_row = ($allow_self_assessment || ($asmrow['member_id'] != $member_id));
 
                 if ($render_row) {
                     $str_random = '';
@@ -1182,6 +1192,7 @@ public function form()
                         }
 
                         $row["group_member_screen_name"] = $asmrow['screen_name'];
+
                         $row["comment_textarea"] = "<textarea id='comment_$str_random' class='comment' name='comment_$str_random'>$comment</textarea>";
 
                         if($allow_self_assessment && $asmrow['member_id'] == $member_id) {
@@ -2633,7 +2644,7 @@ private function instructor_report(&$max_assessors = 0)
     private function _get_last_assessment_ids($member_id, $group_id, $resource_link_id) {
           $where = $this->__current_submission_where_clause($member_id, $group_id, $resource_link_id);
 
-          ee()->db->select("`previous_id` as `id`");
+          ee()->db->select("id");
           ee()->db->where($where);
           $res = ee()->db->get("lti_peer_assessments");
 
