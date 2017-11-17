@@ -98,7 +98,7 @@ $(".lti_peer_assessment_clear").bind("click", function(e) {
 var enable_group_marking = function() {
 var str = '<button id="group_mark" class="hover_button" data-cxt="0"></button>';
 var button = $(str);
-var rollover_style = "position: absolute; background-color: #f7d77e; border: thin solid red; padding: 0.2em";
+var rollover_style = "position: absolute; background-color: #f7d77e; border: thin solid red; padding: 0.2em; opacity: 1.0; z-index: 10000";
 
 $("tr td:nth-child(5)").bind("mouseover", function(e) {
     $(e.target).addClass("add-pointer");
@@ -109,12 +109,12 @@ $("tr td:nth-child(5)").bind("mouseover", function(e) {
 
     if(!cxt) return false;
 
-    $('button[data-cxt="'+cxt+'"]').parent().siblings().css('background-color', 'lightgreen');
+    $('button[data-cxt="'+cxt+'"]').parent().siblings().css({'background-color' : 'lightgreen'}).not(this).not("#msg").css({'opacity': 0.3 });
   //  console.log(igm);
     if(igm) {
-      $(e.target).closest('tr').prev().find('td:nth-child(1)').append("<p id='msg' style='"+rollover_style+"'>Current mark for '"+group_names[cxt].name + "': <br><span style='font-size:14pt'>"+igm+"</span><br />Click to change.</p>");
+      $(e.target).append("<p id='msg' style='"+rollover_style+"'>Current mark for '"+group_names[cxt].name + "': <br><span style='font-size:14pt'>"+igm+"</span><br />Click to change.</p>");
     } else {
-      $(e.target).closest('tr').prev().find('td:nth-child(1)').append("<p id='msg' style='"+rollover_style+"'>Give a group mark to '"+group_names[cxt].name+"'</p>");
+      $(e.target).append("<p id='msg' style='"+rollover_style+"'>Give a group mark to '"+group_names[cxt].name+"'</p>");
     }
 
     var prompt;
@@ -157,8 +157,8 @@ $("tr td:nth-child(5)").bind("mouseover", function(e) {
 
 }).bind("mouseout", function(e) {
     var cxt = $(e.target).next('td').find('button').attr('data-cxt');
-    $(e.target).closest('tr').prev().find('td:nth-child(1)').find('#msg').remove();
-      $('button[data-cxt="'+cxt+'"]').parent().siblings().css('background-color', '');
+    $(e.target).find('#msg').remove();
+      $('button[data-cxt="'+cxt+'"]').parent().siblings().css('background-color', '').css({opacity: '', 'font-weight': ''});
       $(e.target).unbind("click");
 });
 };
