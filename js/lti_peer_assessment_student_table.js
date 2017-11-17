@@ -121,7 +121,7 @@ $("tr td:nth-child(5)").bind("mouseover", function(e) {
     $(e.target).bind('click', function() {
       if(prompt) return false;
 
-              prompt = bootbox.prompt("[experimental] Please give a group mark for '"+group_names[cxt].name+"'<br><br>(enter -1 to clear grade)",
+              prompt = bootbox.prompt("Please give a group mark for '"+group_names[cxt].name+"'<br><br>(enter -1 to clear grade)",
                 function(res) {
                   if(isNaN(res)) {
                     bootbox.alert("The mark must be numeric");
