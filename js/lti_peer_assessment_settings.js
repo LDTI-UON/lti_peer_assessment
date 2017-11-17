@@ -12,13 +12,14 @@ $(document).ready(function() {
    function() {
       if($('select[name=score_calculation] option:selected').attr("value") == 'standard_mean') {
           $("select[name='spark_plus']").addClass('hide').closest('.btn-group').addClass('hide');
+          $("input[name='assignment_score']").addClass('hide').prev('label').addClass('hide');
         //  $("input[name='allow_self_assessment'][value='no']").prop('checked', true);
           $("input[name='allow_self_assessment'][type='radio'], input[name='include_self_in_mean_score'][type='radio']").prop('disabled', false);
           $("input[name='include_self_in_mean_score'][type='hidden']").remove();
           $("input[name='allow_self_assessment'][type='hidden']").remove();
       } else {
           $("select[name='spark_plus']").removeClass('hide').closest('.btn-group').removeClass('hide');
-
+          $("input[name='assignment_score']").removeClass('hide').prev('label').removeClass('hide');
           if($("input[name='allow_self_assessment'][type='hidden']").length === 0) {
               $("input[name='allow_self_assessment'][value='yes'][type='radio']").prop('checked', true).after("<input type='hidden' name='allow_self_assessment' value='yes'/>");
           }

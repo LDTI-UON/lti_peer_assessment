@@ -4,6 +4,17 @@
 # @Last modified by:   ps158
 # @Last modified time: 2017-05-04T09:59:22+10:00
 
+/*
+Note on TESTING in production, for debug purposes (I know this is unorthodox but unfortunately necessary sometimes).
+To output for testing, just add a testing parameter to the custom launch params:
+eg.
+
+if(isset($_REQUEST['custom_testing'])) {
+      $row["group_member_screen_name"] = $asmrow['screen_name']." $asmrow[member_id]";
+}
+
+*/
+
 if (!defined('BASEPATH')) {
     exit('No direct script access allowed');
 }
@@ -124,7 +135,7 @@ class Lti_peer_assessment
 
     public function __construct()
     {
-        $this->EE = get_instance();
+        //$this->EE = get_instance();
         static::$plugin_settings['score_calculation'] = static::$score_calculation;
         static::$plugin_settings['score_calculation']['spark_plus'] = static::$spark_plus;
 
@@ -622,7 +633,7 @@ private function removeSpaceFillers($group_name)
 
         $plugin_settings = $this->_get_plugin_settings_array();
 
-        if (isset($_POST['show_grade_column'])) {
+        if (isset($_POST['total_score'])) {
             $plugin_settings['show_grade_column'] = $show_grade_column;
             $plugin_settings['show_comments'] = $show_comments;
             $plugin_settings['allow_self_assessment'] = $allow_self_assessment;
@@ -789,40 +800,101 @@ private function removeSpaceFillers($group_name)
 
     /* Note:  if assessment has a previous then member has assessed. (test this...?)  */
 
-  private function _group_member_list_query($assessor_group_id, $member_id, $locked = FALSE, $preview = FALSE) {
+  private function _group_member_list_query($assessor_group_id, $member_id, $locked = FALSE, $preview = FALSE, $resource_link_id = NULL) {
 
-    ee()->db->distinct();
-    ee()->db->select("lti_group_contexts.id as group_context_id,  members.member_id,
-                        members.screen_name, lti_group_contexts.group_id, lti_group_contexts.group_name, lti_peer_assessments.score,
-                        lti_peer_assessments.comment, lti_peer_assessments.rubric_json, lti_peer_assessments.resource_link_id, lti_peer_assessments.locked, lti_peer_assessments.current");
-    ee()->db->from("lti_group_contexts", "lti_peer_assessments");
+    if(isset($this->lti_object)) {
+          $resource_link_id = $this->lti_object->resource_link_id;
+    }
+  //  ee()->db->distinct("lti_peer_assessments.member_id, lti_peer_assessments.group_id, lti_peer_assessments.assessor_member_id, lti_peer_assessments.resource_link_id");
+    ee()->db->select("lti_group_contexts.id as group_context_id, members.member_id,
+                        members.screen_name, lti_group_contexts.group_id, lti_group_contexts.group_name, lti_peer_assessments.score, lti_peer_assessments.assessor_member_id,
+                        lti_peer_assessments.comment, lti_peer_assessments.rubric_json, lti_peer_assessments.resource_link_id, lti_peer_assessments.locked as locked");
+    ee()->db->from("lti_group_contexts", "lti_peer_assessments", "members");
     ee()->db->join("lti_member_contexts", "lti_group_contexts.internal_context_id = lti_member_contexts.id");
     ee()->db->join("members", "members.member_id = lti_member_contexts.member_id");
     ee()->db->join("lti_peer_assessments", "lti_peer_assessments.group_context_id = lti_group_contexts.id", "left outer");
 
     $where = array(
                   "lti_group_contexts.group_id" => $assessor_group_id,
-                  "lti_peer_assessments.current" => TRUE,
-
+                  "lti_peer_assessments.resource_link_id" => $resource_link_id
                 );
 
-    if($preview === FALSE) {
+    if(!$preview) {
         $where["lti_peer_assessments.assessor_member_id"] = $member_id;
     }
 
     // exclusive query here...
-    if($locked === TRUE) {
+    if($locked) {
         $where["lti_peer_assessments.locked"] = "1";
-
     }
 
     ee()->db->where($where);
     $res = ee()->db->get();
+    /* if this link has not yet been visited then check without resource_link_id */
+    if(!$locked && $res->num_rows() === 0) {
+    //  ee()->db->distinct("lti_peer_assessments.member_id, lti_peer_assessments.group_id, lti_peer_assessments.assessor_member_id, lti_peer_assessments.resource_link_id");
+      ee()->db->select("lti_group_contexts.id as group_context_id, members.member_id,
+                          members.screen_name, lti_group_contexts.group_id, lti_group_contexts.group_name, lti_peer_assessments.score, lti_peer_assessments.assessor_member_id,
+                          lti_peer_assessments.comment, lti_peer_assessments.rubric_json, lti_peer_assessments.resource_link_id, lti_peer_assessments.locked as locked");
+      ee()->db->from("lti_group_contexts", "lti_peer_assessments", "members");
+      ee()->db->join("lti_member_contexts", "lti_group_contexts.internal_context_id = lti_member_contexts.id");
+      ee()->db->join("members", "members.member_id = lti_member_contexts.member_id");
+      ee()->db->join("lti_peer_assessments", "lti_peer_assessments.group_context_id = lti_group_contexts.id", "left outer");
 
+        unset($where["lti_peer_assessments.resource_link_id"]);
+
+        ee()->db->where($where);
+        $res = ee()->db->get();
+
+    $keys = array();
+    /* update for different context */
+    $update_results = FALSE;
+
+          foreach($res->result_array() as $row) {
+            if($row['resource_link_id'] !== $this->lti_object->resource_link_id) {
+              $key = $row['member_id'].$row['group_id'].$row['assessor_member_id'].$this->lti_object->resource_link_id;
+
+              if(! in_array($key, $keys)) {
+                  $keys[] = $key;
+                  $update_results = TRUE;
+                  $new_row = array("member_id" => $row['member_id'],
+                                    "group_id" => $assessor_group_id,
+                                    "assessor_member_id" => $row["assessor_member_id"],
+                                    "resource_link_id" => $this->lti_object->resource_link_id
+                                  );
+
+                    $r = ee()->db->get_where('lti_peer_assessments', $new_row);
+
+                    if($r->num_rows() > 0) return FALSE;
+
+                    $new_row["group_context_id"] = $row["group_context_id"];
+                  //  $new_row["current"] = "1";
+
+                    ee()->db->insert("lti_peer_assessments", $new_row);
+                  }
+            }
+          }
+
+
+      if($update_results) {
+        //ee()->db->distinct("lti_peer_assessments.member_id, lti_peer_assessments.group_id, lti_peer_assessments.assessor_member_id, lti_peer_assessments.resource_link_id");
+      ee()->db->select("lti_group_contexts.id as group_context_id,  members.member_id,
+                            members.screen_name, lti_group_contexts.group_id, lti_group_contexts.group_name, lti_peer_assessments.score, lti_peer_assessments.assessor_member_id,
+                            lti_peer_assessments.comment, lti_peer_assessments.rubric_json, lti_peer_assessments.resource_link_id, lti_peer_assessments.locked as locked");
+        ee()->db->from("lti_group_contexts", "lti_peer_assessments", "members");
+        ee()->db->join("lti_member_contexts", "lti_group_contexts.internal_context_id = lti_member_contexts.id");
+        ee()->db->join("members", "members.member_id = lti_member_contexts.member_id");
+        ee()->db->join("lti_peer_assessments", "lti_peer_assessments.group_context_id = lti_group_contexts.id", "left outer");
+
+          $where["lti_peer_assessments.resource_link_id"] = $this->lti_object->resource_link_id;
+          ee()->db->where($where);
+          $res = ee()->db->get();
+      }
+    }
   return $res;
 }
 
-private function _generate_for_resource_link_id($assessor_group_id, $member_id) {
+/*private function _generate_for_resource_link_id($assessor_group_id, $member_id) {
 
   ee()->db->distinct();
   ee()->db->select("lti_group_contexts.id as group_context_id,  members.member_id,
@@ -852,7 +924,7 @@ private function _generate_for_resource_link_id($assessor_group_id, $member_id) 
     echo "</pre>";
   //  $aff = ee()->db->insert("lti_peer_assessments", $row);
 
-  }
+}*/
 
   //lti_group_contexts.id as group_context_id,  members.member_id,
                       //members.screen_name, lti_group_contexts.group_id, lti_group_contexts.group_name, lti_peer_assessments.score,
@@ -865,7 +937,7 @@ private function _generate_for_resource_link_id($assessor_group_id, $member_id) 
 
 
 //return $res;
-}
+//}*/
 
 private function user_has_assessed() {
       $member_id = ee()->session->userdata('member_id');
@@ -881,10 +953,9 @@ private function user_has_assessed() {
       $is_preview = ee()->config->_global_vars['is_preview_user'];
 
       $group_members = $this->_group_member_list_query($assessor_group_id, $member_id, TRUE, $is_preview);
-
+    //  echo $group_members->num_rows().BR."[$is_preview]";
       return $group_members->num_rows() > 0;
 }
-
 
 /*
  *  Rolling submission form, means students can assess as many times as they like.
@@ -913,8 +984,6 @@ public function form()
     $rubric = $this->get_rubric();
 
     $is_preview = ee()->config->_global_vars['is_preview_user'];
-
-    //echo "IS PREVIEW? [$is_preview]";
 
     if(! $is_preview) {
           $mrow = $this->get_user_credentials($member_id);
@@ -974,7 +1043,7 @@ public function form()
             ee()->db->where(array('TMP_POST_ID' => $student_id, 'assessor_member_id' => $member_id));
             $rubric_json = !empty($row['rubric_json']) ? $row['rubric_json'] : '';
             $locked = $is_preview ? FALSE : ee()->input->post('locked');
-            ee()->db->update($form_table_name, array('score' => $row['score'], 'comment' => $row['comment'], 'rubric_json' => $rubric_json, 'resource_link_id' => $this->lti_object->resource_link_id, 'locked' => $locked, 'current' => ! $locked, 'TMP_POST_ID' => null));
+            ee()->db->update($form_table_name, array('score' => $row['score'], 'comment' => $row['comment'], 'rubric_json' => $rubric_json, 'resource_link_id' => $this->lti_object->resource_link_id, 'locked' => $locked, 'TMP_POST_ID' => null));
 
             $total_affected +=  ee()->db->affected_rows();
         }
@@ -997,16 +1066,19 @@ public function form()
     if ((isset($_POST['new_action']) || $action === 'retrieve') || ($action === 'assign-marks' && $_POST['locked'] == 0)) {
 
         $results = $this->_group_member_list_query($assessor_group_id, $member_id, FALSE, $is_preview);
-      //  $n = $results->num_rows;
-      //  echo "Res: res[$n]<br />";
-        /* if does not exit for this resource_link_id create now */
-        if($results->num_rows === 0) {
-          //  $this->_generate_for_resource_link_id($assessor_group_id, $member_id);
+        $_locked = $results->row()->locked;
+
+        if($_locked) {
+            $results = FALSE;
         }
         // remove duplicates
         $dupes = array();
-        $raw_array = $results->result_array();
-        $array = $raw_array;
+
+        if(!$results) {
+            $array = array();
+        } else {
+            $array = $results->result_array();
+        }
 
         foreach($array as $key => $row) {
           if(/*$row['resource_link_id'] != $this->lti_object->resource_link_id ||*/
@@ -1017,7 +1089,7 @@ public function form()
           }
         }
 
-        $lock_count = 0;
+    //  $lock_count = 0;
 
         if (count($array) > 0) {
             $attributes = array('id' => 'assessments');
@@ -1036,64 +1108,75 @@ public function form()
           }
 
           foreach ($r_array as $asmrow) {
-                $render_row = ($allow_self_assessment == 1 || $asmrow['member_id'] != $member_id);
+
+                $render_row = ($allow_self_assessment || ($asmrow['member_id'] != $member_id));
 
                 if ($render_row) {
                     $str_random = '';
                     $count = 0;
                     $success = -1;
+                    unset($data);
+
                     do {
                       $str_random = Learning_tools_integration::str_random();
                       $data = array('TMP_POST_ID' => $str_random);
                       $r = ee()->db->get_where($form_table_name, $data);
-
+                      //echo "Numrows: ".$r->num_rows().BR;
                     } while ($r->num_rows() > 0);
                         /* check for current assessment */
+                        ee()->db->distinct('assessor_member_id', 'member_id', 'group_id');
+
                         $where = array('assessor_member_id' => $member_id,
                                             'group_id' => $assessor_group_id,
                                             'group_context_id' => $asmrow['group_context_id'],
                                             'member_id' => $asmrow['member_id'],
-                                          'current' => 1);
+                                            'resource_link_id' => $this->lti_object->resource_link_id
+
+                                          /*'current' => 1*/);
 
                         ee()->db->where($where);
+                      //  ee()->db->or_where(array("TMP_POST_ID" => $str_random));
 
-                        $peer_res = ee()->db->get_where($form_table_name, $where);
+                        $peer_res = ee()->db->get($form_table_name);
 
                         if($asmrow['group_context_id'] !== PREVIEW_CONTEXT) {
                                 if ($peer_res->num_rows() == 0) {
+                                    ee()->db->distinct('assessor_member_id', 'member_id', 'group_id');
                                     /* if instructor has unlocked previous assessment : */
                                     $where = array('assessor_member_id' => $member_id,
                                                       'group_id' => $assessor_group_id,
                                                       'group_context_id' => $asmrow['group_context_id'],
                                                       'member_id' => $asmrow['member_id'],
-                                                      'current' => 0, 'locked' => 0);
+                                                      'resource_link_id' =>  $this->lti_object->resource_link_id,
+                                                      /*'current' => 0,*/ 'locked' => 0, 'TMP_POST_ID' => NULL);
 
                                     ee()->db->where($where);
+                                    //ee()->db->or_where(array("TMP_POST_ID" => $str_random));
 
-                                    $peer_res = ee()->db->get_where($form_table_name, $where);
+                                    $peer_res = ee()->db->get($form_table_name);
 
                                         if ($peer_res->num_rows() == 0) {
                                             // create a new assessment
-                                              $data['resource_link_id'] = $this->lti_object->resource_link_id;
+                                            //  $data['resource_link_id'] = $this->lti_object->resource_link_id;
                                               $insert_data = array_merge($where, $data);
                                               ee()->db->insert($form_table_name, $insert_data);
                                               $reload = TRUE;
                                         } else {
                                            // update existing row
-                                           $data['current'] = 1;
-                                            ee()->db->where($where);
-                                            ee()->db->update($form_table_name, $data);
+                                           //$data['current'] = 1;
+
+                                              ee()->db->where($where);
+                                              ee()->db->update($form_table_name, $data);
 
                                             $reload = TRUE;
                                         }
                                 } else {
-                                  // update existing row
-                                     ee()->db->where($where);
-                                     ee()->db->update($form_table_name, $data);
+                                        ee()->db->where($where);
+                                        $r = ee()->db->update($form_table_name, $data);
                                 }
                       }
 
-                    if($asmrow['current'] == TRUE) {
+              //     if($asmrow['current'] == TRUE) {
                       $row = array();
 
                         $val = $asmrow['score'];
@@ -1111,6 +1194,7 @@ public function form()
                         }
 
                         $row["group_member_screen_name"] = $asmrow['screen_name'];
+
                         $row["comment_textarea"] = "<textarea id='comment_$str_random' class='comment' name='comment_$str_random'>$comment</textarea>";
 
                         if($allow_self_assessment && $asmrow['member_id'] == $member_id) {
@@ -1122,7 +1206,7 @@ public function form()
                         $row["self_assess_id"] = $self;
 
                         $table_rows[] = $row;
-                  }
+                //  }
                 }
             }
 
@@ -1136,14 +1220,14 @@ public function form()
                   $previous_id = $row['previous_id'];
 
                     if(empty($previous_id) && isset($group_context_id )) {
-                        ee()->db->where(array('assessor_member_id' => $member_id, 'group_context_id' => $group_context_id, 'locked' => 1));
+                        ee()->db->where(array('assessor_member_id' => $member_id, 'group_context_id' => $group_context_id, 'locked' => 1, 'resource_link_id' => $this->lti_object->resource_link_id));
                         ee()->db->order_by('time', 'desc');
 
                         $res = ee()->db->get($form_table_name);
                         if($res->num_rows() > 0) {
                               $previous_id = $res->row()->id;
 
-                              ee()->db->where(array('assessor_member_id' => $member_id, 'group_context_id' => $group_context_id, 'current' => 1, 'locked' => 0));
+                              ee()->db->where(array('assessor_member_id' => $member_id, 'group_context_id' => $group_context_id, /*'current' => 1,*/ 'locked' => 0, 'resource_link_id' => $this->lti_object->resource_link_id));
                               ee()->db->update($form_table_name, array('previous_id' => $previous_id));
                         }
                     }
@@ -2057,6 +2141,8 @@ public function download_csv()
     $settings = $this->get_instructor_general_settings_array();
     if(!$settings) return false; // not ready...
 
+    //inst$assignment_score = ee()->input->post('assignment_score');
+
     $instructors = array();
     if(isset($settings[$this->module_name]['user_access'])) {
         $instructors = explode(',', $settings[$this->module_name]['user_access']);
@@ -2080,7 +2166,12 @@ public function download_csv()
             if (count($totals) > 0) {
                 fputcsv($handle, array($this->lti_object->course_name.' peer assessments'));
 
-                fputcsv($handle, array('Full Name', 'Student No', 'Group No', 'Group Name', 'Mean Score', 'Multiplier', 'No of Group Members', 'No Assessed this Student', 'Comments'));
+                $header = array('Full Name', 'Student No', 'Group No', 'Group Name', 'Mean Score', 'SPA Multiplier', 'No of Group Members', 'No Assessed this Student', 'Comments', 'Moderated Grade');
+
+              /*  if(!empty($assignment_score))
+                  $header[9] = "Adjusted Assignment Score [/$assignment_score]";*/
+
+                fputcsv($handle, $header);
 
                 foreach ($totals as $line) {
                     $line = str_replace("\r\n", "\n", $line);
@@ -2103,7 +2194,6 @@ public function download_csv()
         $form .= '<p>Download the current list of peer assessments.</p>';
         $form .= form_open_multipart(static::$apeg_url.'/'.ee()->uri->uri_string());
         $form .= form_hidden('peer_assess_action', 'download_peer_assessments_csv');
-    //    $form .= form_hidden('csrf_token', CSRF_TOKEN); auto in EE 3
         $form .= form_submit('submit', 'Download', $this->lti_object->form_submit_class);
         $form .= "<p>$message</p>";
         $form .= form_close();
@@ -2120,7 +2210,7 @@ private function get_report_query($member_id = NULL, $order_by = NULL)
 
     $where_array = array("lti_member_contexts.context_id" => $this->lti_object->context_id, "lti_member_contexts.tool_consumer_instance_id" => $this->lti_object->tool_consumer_instance_id, "lti_peer_assessments.resource_link_id" => $this->lti_object->resource_link_id);
 
-    if($order_by == NULL) {
+    if($order_by === NULL) {
         $order_by_str = "lti_group_contexts.group_name";
     } else {
         $order_by_str = $order_by;
@@ -2130,7 +2220,9 @@ private function get_report_query($member_id = NULL, $order_by = NULL)
         $where_array["lti_peer_assessments.member_id"] = $member_id;
     }
 
-    ee()->db->select("lti_peer_assessments.group_id, lti_peer_assessments.member_id, lti_peer_assessments.assessor_member_id, lti_peer_assessments.rubric_json, lti_group_contexts.group_name, lti_group_contexts.group_id, members.screen_name, members.username, lti_peer_assessments.score, lti_peer_assessments.comment");
+    $where_array["locked"] = 1;
+
+    ee()->db->select("lti_peer_assessments.group_id, lti_peer_assessments.member_id, lti_peer_assessments.assessor_member_id, lti_peer_assessments.rubric_json, lti_group_contexts.group_name, lti_group_contexts.group_id, members.screen_name, members.username, lti_peer_assessments.score, lti_peer_assessments.comment, lti_peer_assessments.instructor_group_mark");
     ee()->db->join("members", "lti_peer_assessments.member_id = members.member_id");
     ee()->db->join("lti_group_contexts", "lti_group_contexts.id = lti_peer_assessments.group_context_id");
     ee()->db->join("lti_member_contexts", "lti_group_contexts.internal_context_id = lti_member_contexts.id");
@@ -2460,7 +2552,7 @@ private function get_latest_peer_assessment($member_id = NULL) {
     }
 
 /* CSV instructor report*/
-private function instructor_report(&$max_assessors = 0)
+private function instructor_report($max_assessors = 0)
 {
     $results = $this->get_report_query();
     $max_score = $this->get_score_setting();
@@ -2501,7 +2593,7 @@ private function instructor_report(&$max_assessors = 0)
                             $totals[$row['member_id']] = 0;
                             $peer_ratings[$row['group_id']][$row['member_id']] = array();
                             $csv_rows[$row['member_id']] = array($row['screen_name'], $row['username'], $row['group_id'], $row['group_name'], 0,
-                                    0, $group_counts[$row['group_id']], 1, "");
+                                    0, $group_counts[$row['group_id']], 1, "", 0);
                       }
 
                     $score = $row['score'];
@@ -2517,8 +2609,6 @@ private function instructor_report(&$max_assessors = 0)
                     $group_totals[$row['group_id']][$row['member_id']] = $totals[$row['member_id']];
 
                     $csv_rows[$row['member_id']][8] .= $assessor_member_name."Comment: ".chr(13).$row['comment'].chr(13).'---------------'.chr(13);
-
-
       }
     }
 
@@ -2530,13 +2620,28 @@ private function instructor_report(&$max_assessors = 0)
 
             if($group_mean > 0) {
                 $spa_mean_score = $totals[$row['member_id']] / $group_mean;
-            } else{ $spa_mean_score = 0;}
+            } else{
+                $spa_mean_score = 0;
+            }
 
             $mean_score = $totals[$row['member_id']] / $members_assessed_this_student[$row['member_id']];
 
             $csv_rows[$row['member_id']][4] = round($mean_score, 0, PHP_ROUND_HALF_DOWN);
             $csv_rows[$row['member_id']][5] = round(sqrt($spa_mean_score), 2, PHP_ROUND_HALF_DOWN); // SPA score multiplier
-            $csv_rows[$row['member_id']][7] = $members_assessed_this_student[$row['member_id']];    } else {
+            $csv_rows[$row['member_id']][7] = $members_assessed_this_student[$row['member_id']];
+
+            $adjusted_score = "no grade provided";
+
+            $assignment_score = isset($row["instructor_group_mark"]) ? $row["instructor_group_mark"] : NULL;
+
+            if(!empty($assignment_score)) {
+                $adjusted_score = floor($assignment_score * $spa_mean_score);
+                $adjusted_score = $adjusted_score > $assignment_score ? $assignment_score : $adjusted_score;
+                $csv_rows[$row['member_id']][9] = $adjusted_score;
+            } else {
+                $csv_rows[$row['member_id']][9] = "no grade provided";
+            }
+          } else {
             $mean_score = 0;
         }
       }
@@ -2549,20 +2654,24 @@ private function instructor_report(&$max_assessors = 0)
     return $csv_rows;
 }
     private function __current_submission_where_clause($member_id, $group_id, $resource_link_id) {
-          return array("assessor_member_id" => $member_id, "group_id" => $group_id, "resource_link_id" => $resource_link_id, "current" => 1);
+          if($member_id === NULL) {
+              return array("group_id" => $group_id, "resource_link_id" => $resource_link_id);
+          } else {
+              return array("assessor_member_id" => $member_id, "group_id" => $group_id, "resource_link_id" => $resource_link_id);
+          }
     }
 
-    private function _clear_pointer_to_current($member_id, $group_id) {
+    private function _clear_pointer_to_current($member_id, $group_id, $resource_link_id) {
         $where = $this->__current_submission_where_clause($member_id, $group_id, $resource_link_id);
 
         ee()->db->where($where);
-        ee()->db->update("lti_peer_assessments", array("current" => 0));
+        ee()->db->update("lti_peer_assessments");
     }
 
-    private function _get_last_assessment_ids($member_id, $group_id, $resource_link_id) {
+    private function _get_last_assessment_ids($member_id = NULL, $group_id, $resource_link_id) {
           $where = $this->__current_submission_where_clause($member_id, $group_id, $resource_link_id);
 
-          ee()->db->select("`previous_id` as `id`");
+          ee()->db->select("id");
           ee()->db->where($where);
           $res = ee()->db->get("lti_peer_assessments");
 
@@ -2583,19 +2692,73 @@ private function instructor_report(&$max_assessors = 0)
         $affected = 0;
         $member_id = ee()->input->post('id');
         $group_id = ee()->input->post('cxt');
-        $resource_link_id = ee()->input->post('resource_link_id');
+        $resource_link_id = ee()->input->post('rli');
 
         $str = $this->_get_last_assessment_ids($member_id, $group_id, $resource_link_id); // MUST stay in this order!!
 
         if($str !== FALSE) {
-          $this->_clear_pointer_to_current($member_id, $group_id);
+        //  $this->_clear_pointer_to_current($member_id, $group_id, $resource_link_id);
 
           ee()->db->where("`id` IN $str");
-          ee()->db->update('lti_peer_assessments', array('locked' => 0, 'current' => 1));
+          ee()->db->update('lti_peer_assessments', array('locked' => 0));
           $affected += ee()->db->affected_rows();
         }
 
         echo json_encode(array("ids" => $str, "rows_affected" => $affected));
+        exit();
+    }
+    public function helper_user_has_assessed() {
+
+          $map = ee()->input->post('map');
+
+          $map_new = $map;
+
+          foreach($map as $k => $row) {
+
+            $new_row = $row;
+
+            $cxt = isset($row['cxt']) ? $row['cxt'] : 0;
+            $rli = isset($row['rli']) ? $row['rli'] : 0;
+
+            $group_members = $this->_group_member_list_query($cxt, $row['id'], TRUE, FALSE, $rli);
+            $new_row["ha"] = ($group_members->num_rows() > 0);
+
+            $group_members = $this->_group_member_list_query($cxt, $row['id'], FALSE, FALSE, $rli);
+
+            foreach($group_members->result_array() as $row) {
+                  if(!empty($row['comment'] || !empty($row['rubric_json'] || $row['score'] !== NULL))) {
+                      $new_row["t"] = TRUE;
+                      break;
+                  }
+            }
+
+            $map_new[$k] = $new_row;
+          }
+
+          echo json_encode($map_new);
+          exit();
+    }
+
+    public function instructor_group_mark() {
+          $cxt = ee()->input->post('cxt');
+          $rli = ee()->input->post('rli');
+          $mark = ee()->input->post('mark');
+
+          if($mark == -1) $mark = NULL;
+
+          $str = $this->_get_last_assessment_ids(NULL, $cxt, $rli);
+          $affected = 0;
+
+          if(strlen(trim($str)) > 0) {
+            ee()->db->where("`id` IN $str");
+            ee()->db->update('lti_peer_assessments',
+                        array('instructor_group_mark' => $mark
+                              ));
+
+            $affected += ee()->db->affected_rows();
+          }
+
+        echo json_encode(array("rows_affected" => $affected));
         exit();
     }
 
@@ -2604,9 +2767,9 @@ private function instructor_report(&$max_assessors = 0)
 
         $member_id = ee()->input->post('id');
         $group_id = ee()->input->post('cxt');
-
-        $str = $this->_get_last_assessment_ids($member_id, $group_id);
-        $this->_clear_pointer_to_current($member_id, $group_id);
+        $resource_link_id = ee()->input->post('resource_link_id');
+        $str = $this->_get_last_assessment_ids($member_id, $group_id, $resource_link_id);
+        //$this->_clear_pointer_to_current($member_id, $group_id, $resource_link_id);
 
         if(strlen(trim($str)) > 0) {
           ee()->db->where("`id` IN $str");
@@ -2614,8 +2777,8 @@ private function instructor_report(&$max_assessors = 0)
                       array('locked' => 0,
                             'rubric_json' => NULL,
                             'score' => 0,
-                            'comment' => '',
-                            'current' => 1));
+                            'comment' => ''
+                            ));
 
           $affected += ee()->db->affected_rows();
         }

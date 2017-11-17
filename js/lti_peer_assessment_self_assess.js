@@ -14,8 +14,9 @@ ltipa.check_yourself =  function() {
   };
 
 $("#assessments table").on("updateTableState", function() {
-    //console.log("balhafdjlasdfl");
-      ltipa.check_yourself();
+    if(ltipa) {
+            ltipa.check_yourself();
+    }
 });
 
 $(document).ready(function() {

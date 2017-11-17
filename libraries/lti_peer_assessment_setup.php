@@ -91,7 +91,7 @@ $create_single_sql = "CREATE TEMPORARY TABLE IF NOT EXISTS `flag_for_delete` AS
 (SELECT DISTINCT `A`.`id` FROM `$single_table` `A`
     LEFT JOIN `$group_contexts_table` `B` ON `A`.`member_id`
     LEFT JOIN `$group_contexts_table` `C` ON `A`.`assessor_member_id`
-    WHERE `A`.`resource_link_id` = `" . $this->parent_object->resource_link_id . "` AND `A`.`group_context_id` NOT IN
+    WHERE `A`.`resource_link_id` = '" . $this->parent_object->resource_link_id . "' AND `A`.`group_context_id` NOT IN
 (SELECT id FROM `$group_contexts_table`))";
 
 ee()->db->query($create_single_sql);

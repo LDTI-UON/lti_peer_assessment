@@ -43,7 +43,7 @@ $lang = array(
 	 'instructor_resource_table_heading' => 'Resources available to this course',
 	 'student_resource_table_heading' => 'Resources available to you',
 	 'random_form_error' => 'Note that there were not enough resources for each user in the group, so some users missed out.',
-	 'session_expired' => 'Your session has expired after 30 minutes of inactivity, please login again by <a href="javascript:history.back()">returning to your course page</a> and clicking on the link.',
+	 'session_expired' => 'Your session has expired, please login again by <a href="javascript:history.back()">returning to your course page</a> and clicking on the link.',
 	 'download_error' => 'Sorry there was a problem with your download, no filename was supplied.  Are you logged in?',
 	 "group_no" => "Group Number",
 	 "group_name" => "Group Name",
@@ -63,7 +63,7 @@ $lang = array(
 	 'student_table_header6' => "Unlock Submission",
 	 'student_table_header7' => "Clear Submission",
 	 'group_preview' => "Group preview for instructors",
-	 
+
 );
 
 
