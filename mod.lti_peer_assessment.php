@@ -62,18 +62,18 @@ class Lti_peer_assessment
     public static $labels = array(
     'standard_mean' => 'Standard Mean',
     'spark_plus' => 'SPARK Plus',
-    'sap_original' => 'SAP original & SAPA',
-    'sap_knee' => 'SAP knee & SAPA',
-    'sap_linear' => 'SAP linear & SAPA',
+    'spa_original' => 'SPA original & SAPA',
+    'spa_knee' => 'SPA knee & SAPA',
+    'spa_linear' => 'SPA linear & SAPA',
 );
 
     public static $score_calculation = array('standard_mean' => false,
                                     'spark_plus' => array(), );
 
     public static $spark_plus = array(
-              'sap_original' => false,
-              'sap_knee' => true,
-              'sap_linear' => false,
+              'spa_original' => false,
+              'spa_knee' => true,
+              'spa_linear' => false,
             );
 
     public static $plugin_settings =
@@ -690,6 +690,8 @@ private function removeSpaceFillers($group_name)
             $variable_row['settings_javascript'] = " ";
             $variable_row['form_open'] = form_open_multipart(static::$apeg_url.'/'.ee()->uri->uri_string(), array("class" => $this->lti_object->form_class));
 
+            $is_super = ee()->session->userdata("group_id") == 1 ? '1' : '0';
+
             if ($is_super) {
 
                 $results = $this->_query_instructor_member_list();
@@ -715,6 +717,7 @@ private function removeSpaceFillers($group_name)
                         form_dropdown('score_calculation', $calc_options['options'], $calc_options['selected'],  "style='min-width: 12em; padding: 0.3em'").
                           form_dropdown('spark_plus', $spark_options['options'], $spark_options['selected'],  "style='min-width: 12em; padding: 0.3em'");
 
+            $variable_row['settings_javascript'] .= "document.is_super = $is_super;";
             $variable_row['settings_javascript'] .= file_get_contents($addon_path.'/js/'.$this->module_name.'_settings.js');
 
             $radios = array();
@@ -2155,7 +2158,11 @@ public function download_csv()
        // $len = 0;
         $message = '';
         if (ee()->input->post('peer_assess_action') == 'download_peer_assessments_csv') {
-            $totals = $this->instructor_report();
+            $report = $this->instructor_report();
+
+            $totals = $report["csv_rows"];
+            $total_possible = $report["total_score"];
+            $algorithm = $report["algorithm"];
 
             ee()->load->helper('download');
 
@@ -2166,7 +2173,7 @@ public function download_csv()
             if (count($totals) > 0) {
                 fputcsv($handle, array($this->lti_object->course_name.' peer assessments'));
 
-                $header = array('Full Name', 'Student No', 'Group No', 'Group Name', 'Mean Score', 'SPA Multiplier', 'No of Group Members', 'No Assessed this Student', 'Comments', 'Moderated Grade');
+                $header = array('Full Name', 'Student No', 'Group No', 'Group Name', "Mean Score /$total_possible", "SPA Multiplier [$algorithm]", 'No. Group Members', 'No. Peers Assessed this Student', 'Comments', 'Moderated Group Grade');
 
               /*  if(!empty($assignment_score))
                   $header[9] = "Adjusted Assignment Score [/$assignment_score]";*/
@@ -2416,11 +2423,11 @@ private function get_latest_peer_assessment($member_id = NULL) {
 
                     $SPA_factor = sqrt($mean_score);
 
-                    if ($settings['score_calculation']['spark_plus']['sap_knee']) {
+                    if ($settings['score_calculation']['spark_plus']['spa_knee']) {
                         if ($mean_score < 1) {
                             $SPA_factor = $mean_score;
                         }
-                    } elseif ($settings['score_calculation']['spark_plus']['sap_linear']) {
+                    } elseif ($settings['score_calculation']['spark_plus']['spa_linear']) {
                         $SPA_factor = $mean_score;
                     }
 
@@ -2566,8 +2573,11 @@ private function instructor_report($max_assessors = 0)
     $group_counts = array();
     $group_totals = array();
     $peer_ratings = array();
+    $rubric_total = static::$plugin_settings['total_score'];
 
     foreach ($results->result_array() as $row) {
+
+
         if (!array_key_exists($row['group_id'], $group_counts)) {
             $count_result = ee()->db->query("SELECT count(*) member_count FROM exp_lti_group_contexts WHERE group_id = '$row[group_id]'");
                     //$form .= var_export($count_result);
@@ -2586,7 +2596,9 @@ private function instructor_report($max_assessors = 0)
         if($amr !== NULL) {
 
                       $assessor_member_name = $amr->screen_name.' ('.$amr->username.')';
-                      $assessor_member_name .= chr(13).' Gave mark: '.$row['score'].chr(13).chr(13);
+
+                      $score_perc = empty($rubric_total) ? "N/A" : floor(($row['score'] / $rubric_total) * 100);
+                      $assessor_member_name .= chr(13)." Gave mark: $row[score]/$rubric_total | $score_perc% ".chr(13).chr(13);
 
                       if (!array_key_exists($row['member_id'], $csv_rows)) {
                             $members_assessed_this_student[$row['member_id']] = 0;
@@ -2612,6 +2624,25 @@ private function instructor_report($max_assessors = 0)
       }
     }
 
+    $sc = static::$plugin_settings['score_calculation'];
+
+    $score_calc = "";
+    foreach($sc as $k => $p) {
+        if($p) {
+          if(is_array($p)) {
+              foreach($p as $k1 => $p1) {
+                  if($p1) {
+                    $score_calc = $k1;
+                    break;
+                  }
+              }
+          } else {
+              $score_calc = $k;
+              break;
+          }
+        }
+    }
+
     foreach ($results->result_array() as $row) {
       if(isset($members_assessed_this_student[$row['member_id']])) {
         if ($members_assessed_this_student[$row['member_id']] > 0) {
@@ -2619,23 +2650,46 @@ private function instructor_report($max_assessors = 0)
             $group_mean = $this->group_mean($group_totals[$row['group_id']]);
 
             if($group_mean > 0) {
-                $spa_mean_score = $totals[$row['member_id']] / $group_mean;
+                  $spa_l = $totals[$row['member_id']] / $group_mean;
+                  $spa = sqrt($spa_l);
+
+                  if($score_calc === "spa_knee") {
+                      $spa_mean_score = $spa < 1 ? $spa : $spa_l;
+                  }
+                  if($score_calc === "spa_linear") {
+                      $spa_mean_score = $spa_l;
+                  }
+                  if($score_calc === "spa_original") {
+                      $spa_mean_score = $spa;
+                  }
             } else{
                 $spa_mean_score = 0;
+            }
+
+            $spa_mean_score = number_format($spa_mean_score, 2);
+
+            if($spa_mean_score > 1.9) {
+                $spa_mean_score = "$spa_mean_score ( skewed due to too few assessors)";
             }
 
             $mean_score = $totals[$row['member_id']] / $members_assessed_this_student[$row['member_id']];
 
             $csv_rows[$row['member_id']][4] = round($mean_score, 0, PHP_ROUND_HALF_DOWN);
-            $csv_rows[$row['member_id']][5] = round(sqrt($spa_mean_score), 2, PHP_ROUND_HALF_DOWN); // SPA score multiplier
+            $csv_rows[$row['member_id']][5] = $spa_mean_score;//round(sqrt($spa_mean_score), 2, PHP_ROUND_HALF_DOWN); // SPA score multiplier
             $csv_rows[$row['member_id']][7] = $members_assessed_this_student[$row['member_id']];
 
             $adjusted_score = "no grade provided";
 
             $assignment_score = isset($row["instructor_group_mark"]) ? $row["instructor_group_mark"] : NULL;
 
+            /*if(ee()->session->userdata("group_id") == 1) {
+                echo "<pre>ID: $row[member_id]";
+                echo "Instructor ass: ".$assignment_score;
+                echo "SPA mean: $spa_mean_score</pre>";
+            }*/
+
             if(!empty($assignment_score)) {
-                $adjusted_score = floor($assignment_score * $spa_mean_score);
+                $adjusted_score = floor($spa_mean_score * $assignment_score);
                 $adjusted_score = $adjusted_score > $assignment_score ? $assignment_score : $adjusted_score;
                 $csv_rows[$row['member_id']][9] = $adjusted_score;
             } else {
@@ -2651,7 +2705,7 @@ private function instructor_report($max_assessors = 0)
     unset($totals);
     unset($members_assessed_this_student);
 
-    return $csv_rows;
+    return array("csv_rows" => $csv_rows, "total_score" => $rubric_total, "algorithm" => $score_calc);
 }
     private function __current_submission_where_clause($member_id, $group_id, $resource_link_id) {
           if($member_id === NULL) {

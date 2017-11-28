@@ -24,6 +24,8 @@ $('.table tr td:nth-of-type(6) > button').each(function(i, v) {
 
 var o = null;
 
+$("table tr button").prop("disabled", true);
+
 $.post(base_url+"?ACT="+acts.lti_peer_assessment.helper_user_has_assessed,
   {map: request_obj},
 
@@ -31,12 +33,15 @@ $.post(base_url+"?ACT="+acts.lti_peer_assessment.helper_user_has_assessed,
         res = JSON.parse(res);
 
         res.forEach(function(v,i) {
-              //console.log(v);
-              var td = $("button[data-id='"+v.id +"']").parents('tr').find('td:nth-child(1)');
+
+              var but = $("button[data-id='"+v.id +"']");
+              var td = but.parents('tr').find('td:nth-child(1)');
+
               if ( td.hasClass("success") ) {
 
                   if(v.ha && v.cxt) {
                       td.addClass('tick');
+                      but.prop("disabled", false);
                   } else if(v.t && v.cxt) {
                       td.addClass('thinking');
                   }
@@ -99,6 +104,8 @@ var enable_group_marking = function() {
 var str = '<button id="group_mark" class="hover_button" data-cxt="0"></button>';
 var button = $(str);
 var rollover_style = "position: absolute; background-color: #f7d77e; border: thin solid red; padding: 0.2em; opacity: 1.0; z-index: 10000";
+$(".spark-only").show();
+$(".mean-only").hide();
 
 $("tr td:nth-child(5)").bind("mouseover", function(e) {
     $(e.target).addClass("add-pointer");
@@ -173,11 +180,16 @@ $(document).ready(function() {
         if(val === 'spark_plus') {
             enable_group_marking();
             $(".spark-only").show();
+            $(".mean-only").hide();
             bootbox.alert("In SPARK mode instructors give a group mark which is moderated by the students marks.");
         } else {
             $("tr td:nth-child(5)").unbind("mouseover").unbind("mouseout");
-            $(".spark-only").hide();
+            $(".mean-only").show();
             bootbox.alert("In mean mode students give each other a grade without instructor involvement. There is no self-assessment in this mode.")
         }
     });
+
+    $('input[name="filter_submitted"]').bind("change", function (e) {
+  			 $("form#filters").submit();
+  	});
 });

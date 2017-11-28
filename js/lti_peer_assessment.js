@@ -1,14 +1,14 @@
+$(document).ready(function() {
 
-		$(document).ready(function() {
 		$("style").append('.focusUser { background-color: lightblue; } .okmsg {color: #00748B;}');
 
 		$('.student_assess').keyup(function () {
 			if($(this).prop('type') !== 'text') return;
 
 			this.value = this.value.replace(/[^0-9]/g,'');
-
+/* jshint ignore:start */
       var score = <?= $js_vars["score"] ?>;
-
+/* jshint ignore:end */
 			if(this.value > score) {
 				this.value = score;
 			}
@@ -79,7 +79,7 @@
 
 		// trigger total message
 		$('.student_assess').first().trigger('keyup');
-
+/* jshint ignore:start */
 		<?php require_once(__DIR__.'/percToggle.js'); ?>
-
+/* jshint ignore:end */
 		});

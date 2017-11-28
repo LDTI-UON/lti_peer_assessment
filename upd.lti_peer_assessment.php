@@ -161,9 +161,9 @@ ee()->load->dbforge();
 public static $labels = array(
     "standard_mean" => "Standard Mean",
     "spark_plus" => "SPARK Plus",
-    "sap_original" => "SAP original with SAPA",
-    "sap_knee" => "SAP knee with SAPA",
-    "sap_linear" => "SAP linear with SAPA",
+    "spa_original" => "SPA original with SAPA",
+    "spa_knee" => "SPA knee with SAPA",
+    "spa_linear" => "SPA linear with SAPA",
 );
 
 
@@ -171,9 +171,9 @@ public static $score_calculation = array("standard_mean" => FALSE,
                                     "spark_plus" => array());
 
 public static $spark_plus = array(
-              "sap_original" => FALSE,
-              "sap_knee" => TRUE,
-              "sap_linear" => FALSE
+              "spa_original" => FALSE,
+              "spa_knee" => TRUE,
+              "spa_linear" => FALSE
             );
 
 public static $plugin_settings =

@@ -7,6 +7,17 @@
 
 $(document).ready(function() {
   var app = app || {};
+$(".admin").toggle();
+// hide Admin only elements - allows super user to see instructor view.
+if(document.is_super) {
+  			var str = '<button id="hide_admin" class="btn btn-default" style="z-index: 2; position: fixed; top: 100px; right: 5px;">Admin Options</button>';
+
+  			$("body").prepend(str);
+
+  			$("#hide_admin").bind("click", function() {
+               $(".admin").toggle();
+  			});
+}
 
   app.toggleSelect =
    function() {
