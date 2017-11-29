@@ -338,7 +338,7 @@ class Lti_peer_assessment
 
     private function _query_get_instructor_settings()
     {
-        ee()->db->where(array('institution_id' => $this->lti_object->course_id, 'course_key' => $this->lti_object->course_key));
+        ee()->db->where(array('institution_id' => $this->lti_object->institution_id, 'course_key' => $this->lti_object->course_key));
 
         return ee()->db->get('lti_instructor_settings');
     }
