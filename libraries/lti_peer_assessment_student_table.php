@@ -34,6 +34,8 @@ if(isset($plugin_filters["filter_submitted"])) {
       }
 }
 
+$percentage = $total_students > 0 ? floor(($completed_peer_assessment / $total_students) * 100) : 0;
+
 $vars['lti_peer_assessment']['completed_peer_assessment'] = array("label" => "Students Completed: ",  "value" => $completed_peer_assessment);
-$vars['lti_peer_assessment']['percentage_completed'] =  array("label" => "Percentage Completed: ",  "value" => floor(($completed_peer_assessment / $total_students) * 100) . "%");
+$vars['lti_peer_assessment']['percentage_completed'] =  array("label" => "Percentage Completed: ",  "value" => $percentage. "%");
 $vars['lti_peer_assessment']['heading'] = array("text" => "Peer Assessment Completion Rates");
