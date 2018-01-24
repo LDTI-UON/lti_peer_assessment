@@ -805,12 +805,11 @@ private function removeSpaceFillers($group_name)
 
   private function _group_member_list_query($assessor_group_id, $member_id, $locked = FALSE, $preview = FALSE, $resource_link_id = NULL) {
 
-<<<<<<< HEAD
+
     if(isset($this->lti_object)) {
           $resource_link_id = $this->lti_object->resource_link_id;
     }
-=======
->>>>>>> ccef1b4fff8082ca0f7d67bf076b535700760622
+
   //  ee()->db->distinct("lti_peer_assessments.member_id, lti_peer_assessments.group_id, lti_peer_assessments.assessor_member_id, lti_peer_assessments.resource_link_id");
     ee()->db->select("lti_group_contexts.id as group_context_id, members.member_id,
                         members.screen_name, lti_group_contexts.group_id, lti_group_contexts.group_name, lti_peer_assessments.score, lti_peer_assessments.assessor_member_id,
@@ -822,11 +821,9 @@ private function removeSpaceFillers($group_name)
 
     $where = array(
                   "lti_group_contexts.group_id" => $assessor_group_id,
-<<<<<<< HEAD
+
                   "lti_peer_assessments.resource_link_id" => $resource_link_id
-=======
-                  "lti_peer_assessments.resource_link_id" => $this->lti_object->resource_link_id
->>>>>>> ccef1b4fff8082ca0f7d67bf076b535700760622
+
                 );
 
     if(!$preview) {
@@ -855,7 +852,7 @@ private function removeSpaceFillers($group_name)
 
         ee()->db->where($where);
         $res = ee()->db->get();
-<<<<<<< HEAD
+
 
     $keys = array();
     /* update for different context */
@@ -897,49 +894,6 @@ private function removeSpaceFillers($group_name)
         ee()->db->join("members", "members.member_id = lti_member_contexts.member_id");
         ee()->db->join("lti_peer_assessments", "lti_peer_assessments.group_context_id = lti_group_contexts.id", "left outer");
 
-=======
-
-    $keys = array();
-    /* update for different context */
-    $update_results = FALSE;
-
-          foreach($res->result_array() as $row) {
-            if($row['resource_link_id'] !== $this->lti_object->resource_link_id) {
-              $key = $row['member_id'].$row['group_id'].$row['assessor_member_id'].$this->lti_object->resource_link_id;
-
-              if(! in_array($key, $keys)) {
-                  $keys[] = $key;
-                  $update_results = TRUE;
-                  $new_row = array("member_id" => $row['member_id'],
-                                    "group_id" => $assessor_group_id,
-                                    "assessor_member_id" => $row["assessor_member_id"],
-                                    "resource_link_id" => $this->lti_object->resource_link_id
-                                  );
-
-                    $r = ee()->db->get_where('lti_peer_assessments', $new_row);
-
-                    if($r->num_rows() > 0) return FALSE;
-
-                    $new_row["group_context_id"] = $row["group_context_id"];
-                  //  $new_row["current"] = "1";
-
-                    ee()->db->insert("lti_peer_assessments", $new_row);
-                  }
-            }
-          }
-
-
-      if($update_results) {
-        //ee()->db->distinct("lti_peer_assessments.member_id, lti_peer_assessments.group_id, lti_peer_assessments.assessor_member_id, lti_peer_assessments.resource_link_id");
-      ee()->db->select("lti_group_contexts.id as group_context_id,  members.member_id,
-                            members.screen_name, lti_group_contexts.group_id, lti_group_contexts.group_name, lti_peer_assessments.score, lti_peer_assessments.assessor_member_id,
-                            lti_peer_assessments.comment, lti_peer_assessments.rubric_json, lti_peer_assessments.resource_link_id, lti_peer_assessments.locked as locked");
-        ee()->db->from("lti_group_contexts", "lti_peer_assessments", "members");
-        ee()->db->join("lti_member_contexts", "lti_group_contexts.internal_context_id = lti_member_contexts.id");
-        ee()->db->join("members", "members.member_id = lti_member_contexts.member_id");
-        ee()->db->join("lti_peer_assessments", "lti_peer_assessments.group_context_id = lti_group_contexts.id", "left outer");
-
->>>>>>> ccef1b4fff8082ca0f7d67bf076b535700760622
           $where["lti_peer_assessments.resource_link_id"] = $this->lti_object->resource_link_id;
           ee()->db->where($where);
           $res = ee()->db->get();
@@ -2758,15 +2712,11 @@ private function instructor_report($max_assessors = 0)
     return array("csv_rows" => $csv_rows, "total_score" => $rubric_total, "algorithm" => $score_calc);
 }
     private function __current_submission_where_clause($member_id, $group_id, $resource_link_id) {
-<<<<<<< HEAD
           if($member_id === NULL) {
               return array("group_id" => $group_id, "resource_link_id" => $resource_link_id);
           } else {
               return array("assessor_member_id" => $member_id, "group_id" => $group_id, "resource_link_id" => $resource_link_id);
           }
-=======
-          return array("assessor_member_id" => $member_id, "group_id" => $group_id, "resource_link_id" => $resource_link_id);
->>>>>>> ccef1b4fff8082ca0f7d67bf076b535700760622
     }
 
     private function _clear_pointer_to_current($member_id, $group_id, $resource_link_id) {
