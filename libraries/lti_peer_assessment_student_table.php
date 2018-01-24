@@ -23,13 +23,15 @@ $members_tbl = ee()->db->dbprefix('members');
 
 if(isset($plugin_filters["filter_submitted"])) {
       if($sub = $plugin_filters["filter_submitted"]) {
-        if($sub === "ns") {
-          $str = implode(",", $ids);
-          $wsql .= " AND $members_tbl.member_id NOT IN($str)";
-        }
-        if($sub === "s") {
-          $str = implode(",", $ids);
-          $wsql .= " AND $members_tbl.member_id IN($str)";
+        if(count($ids) > 0) {
+            if($sub === "ns") {
+              $str = implode(",", $ids);
+              $wsql .= " AND $members_tbl.member_id NOT IN($str)";
+            }
+            if($sub === "s") {
+              $str = implode(",", $ids);
+              $wsql .= " AND $members_tbl.member_id IN($str)";
+            }
         }
       }
 }
