@@ -790,7 +790,9 @@ private function removeSpaceFillers($group_name)
         if ($res->num_rows() == 1) {
             $rubric['id'] = $res->row()->rubric_id;
 
-            return $rubric;
+            if($rubric['id'] !== 'no_rubric' && $rubric['id'] !== 'undefined') {
+                return $rubric;
+            }
         }
 
         return false;
@@ -984,7 +986,6 @@ public function form()
     $row_start_tag = "td";
 
     $allow_self_assessment = $this->get_self_assessment_setting();
-
     $tmp_pool = ee()->TMPL->fetch_param('use_pool');
     $grade_pool = !empty($tmp_pool);
 
@@ -1511,7 +1512,6 @@ $mainDocument->getProperties()->setCreator('Paul Sijpkes')
         $hc = $sheet->getActiveSheet()->getHighestColumn();
 
         $sheet->getActiveSheet()->getColumnDimension($cellStr)->setAutoSize(true);
-
 
         $colLength = count($this->rubric_template_array['col_headers']);
         // criteria

@@ -14,13 +14,9 @@ ltipa.check_yourself =  function() {
   };
 
 $("#assessments table").on("updateTableState", function() {
-<<<<<<< HEAD
     if(ltipa) {
             ltipa.check_yourself();
     }
-=======
-            ltipa.check_yourself();
->>>>>>> ccef1b4fff8082ca0f7d67bf076b535700760622
 });
 
 $(document).ready(function() {

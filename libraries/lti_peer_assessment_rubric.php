@@ -1,10 +1,14 @@
 <?php
 $raw_id = ee()->input->get('rubric_id');
 
+echo "<pre>";
+echo $raw_id;
+
 $parsed = explode("|", $raw_id);
 
 $rubric_id = $parsed[0];
-$rubric_score = $parsed[1];
+
+$rubric_score = isset($parsed[1]) ? $parsed[1]: 0;
 
 if(!empty($rubric_id)) {
 
@@ -17,9 +21,15 @@ if(!empty($rubric_id)) {
     $where =  array("resource_link_id" => $this->resource_link_id);
     $res = ee()->db->get_where('lti_course_link_resources', $where);
 
-    if($rubric_id == 'del') {
-        if($res->num_rows() > 0) {
-            ee() -> db -> delete('lti_course_link_resources', $where);
+    if($rubric_id === 'del') {
+        if($res->num_rows() == 0) {
+          $settings = array("rubric" => array("show_column_scores" => $show_scores));
+          $ser = serialize($settings);
+          $data = array("course_id" => $this->course_id, "resource_link_id" => $this->resource_link_id, "rubric_id" => "no_rubric", "resource_settings" => $ser);
+              ee() -> db -> insert('lti_course_link_resources', $data);
+        }
+        else {
+            ee() -> db -> update('lti_course_link_resources', array('rubric_id' => 'no_rubric'),  $where);
         }
     } else {
         $settings = array("rubric" => array("show_column_scores" => $show_scores));
