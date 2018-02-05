@@ -2157,6 +2157,7 @@ public function download_csv()
     }
     //$member_id =  ee() -> session -> userdata('member_id');
     $member_id = ee()->session->userdata('member_id');
+    $allow_self_assessment = $this->get_self_assessment_setting();
 
     if ($this->lti_object->isInstructor) {
         $form = '';
@@ -2178,10 +2179,7 @@ public function download_csv()
             if (count($totals) > 0) {
                 fputcsv($handle, array($this->lti_object->course_name.' peer assessments'));
 
-                $header = array('Full Name', 'Student No', 'Group No', 'Group Name', "Mean Score /$total_possible", "SPA Multiplier [$algorithm]", 'No. Group Members', 'No. Peers Assessed this Student', 'Comments', 'Moderated Group Grade');
-
-              /*  if(!empty($assignment_score))
-                  $header[9] = "Adjusted Assignment Score [/$assignment_score]";*/
+                $header = array('Full Name', 'Student No', 'Group No', 'Group Name', "Mean Score /$total_possible", "SPA Multiplier [$algorithm]", 'No. Group Members', 'No. Peers Assessed this Student', 'Comments', 'Moderated Group Grade', $allow_self_assessment ? "SAPA" : null);
 
                 fputcsv($handle, $header);
 
@@ -2196,7 +2194,7 @@ public function download_csv()
             $data = file_get_contents($file);
 
             $data = mb_convert_encoding($data, 'UTF-8');
-           // $len = strlen($data);
+
             unlink($file);
 
             force_download($this->lti_object->course_name.' Assessments.csv', $data);
@@ -2579,6 +2577,8 @@ private function instructor_report($max_assessors = 0)
     $group_totals = array();
     $peer_ratings = array();
     $rubric_total = static::$plugin_settings['total_score'];
+    $allow_self_assessment = $this->get_self_assessment_setting();
+    $self_score = array();
 
     foreach ($results->result_array() as $row) {
 
@@ -2598,6 +2598,8 @@ private function instructor_report($max_assessors = 0)
 
           $amr = $res->row();
         }
+
+
         if($amr !== NULL) {
 
                       $assessor_member_name = $amr->screen_name.' ('.$amr->username.')';
@@ -2610,8 +2612,12 @@ private function instructor_report($max_assessors = 0)
                             $totals[$row['member_id']] = 0;
                             $peer_ratings[$row['group_id']][$row['member_id']] = array();
                             $csv_rows[$row['member_id']] = array($row['screen_name'], $row['username'], $row['group_id'], $row['group_name'], 0,
-                                    0, $group_counts[$row['group_id']], 1, "", 0);
+                                    0, $group_counts[$row['group_id']], 1, "", 0, $allow_self_assessment ? 0 : NULL);
                       }
+
+                    if($amr->member_id == $row['member_id']) {
+                        $self_score[$row['member_id']] = $row['score'];
+                    }
 
                     $score = $row['score'];
                     $members_assessed_this_student[$row['member_id']] = $members_assessed_this_student[$row['member_id']] + 1;  // count assessments (not all members may assess)
@@ -2682,22 +2688,24 @@ private function instructor_report($max_assessors = 0)
             $csv_rows[$row['member_id']][5] = $spa_mean_score;//round(sqrt($spa_mean_score), 2, PHP_ROUND_HALF_DOWN); // SPA score multiplier
             $csv_rows[$row['member_id']][7] = $members_assessed_this_student[$row['member_id']];
 
-            $adjusted_score = "no grade provided";
+            $adjusted_score = "N/A";
 
             $assignment_score = isset($row["instructor_group_mark"]) ? $row["instructor_group_mark"] : NULL;
-
-            /*if(ee()->session->userdata("group_id") == 1) {
-                echo "<pre>ID: $row[member_id]";
-                echo "Instructor ass: ".$assignment_score;
-                echo "SPA mean: $spa_mean_score</pre>";
-            }*/
 
             if(!empty($assignment_score)) {
                 $adjusted_score = floor($spa_mean_score * $assignment_score);
                 $adjusted_score = $adjusted_score > $assignment_score ? $assignment_score : $adjusted_score;
                 $csv_rows[$row['member_id']][9] = $adjusted_score;
             } else {
-                $csv_rows[$row['member_id']][9] = "no grade provided";
+                $csv_rows[$row['member_id']][9] = "N/A";
+            }
+
+            if($allow_self_assessment && isset($self_score[$row['member_id']])) {
+                $mean_score_for_sapa = $totals[$row['member_id']] / ($members_assessed_this_student[$row['member_id']] - 1);
+                $val = $self_score[$row['member_id']] / $mean_score_for_sapa;
+                $val = sqrt($val);
+
+                $csv_rows[$row['member_id']][10] = round($val, 2, PHP_ROUND_HALF_DOWN);
             }
           } else {
             $mean_score = 0;
