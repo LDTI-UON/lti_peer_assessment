@@ -2171,7 +2171,7 @@ public function download_csv()
 
             ee()->load->helper('download');
 
-            $file = tempnam('lti_uploads', 'tmp_');
+            $file = @tempnam('lti_uploads', 'tmp_');
             $handle = fopen($file, 'w+b');
 
             //echo "<b>Count: ".count($totals)."</b>";
