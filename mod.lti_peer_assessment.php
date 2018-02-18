@@ -850,7 +850,7 @@ private function removeSpaceFillers($group_name)
       ee()->db->join("members", "members.member_id = lti_member_contexts.member_id");
       ee()->db->join("lti_peer_assessments", "lti_peer_assessments.group_context_id = lti_group_contexts.id", "left outer");
 
-        unset($where["lti_peer_assessments.resource_link_id"]);
+      //  unset($where["lti_peer_assessments.resource_link_id"]);
 
         ee()->db->where($where);
         $res = ee()->db->get();
