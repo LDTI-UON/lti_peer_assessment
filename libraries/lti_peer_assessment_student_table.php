@@ -1,12 +1,13 @@
 <?php
 $sample_members = ee()->config->item('sample_members');
-$sample_length = count($sample_members["ids"]);
+//$sample_length = count($sample_members["ids"]);
 
 ee()->db->where(array("lti_peer_assessments.resource_link_id" => $resource_link_id));
 ee()->db->join("lti_group_contexts", "lti_group_contexts.member_id = lti_peer_assessments.assessor_member_id");
 ee()->db->group_by("assessor_member_id");
+ee()->db->where_not_in('lti_group_contexts.member_id', $sample_members);
 $res = ee()->db->get("lti_peer_assessments");
-$total_students = $res->num_rows() - $sample_length;
+$total_students = $res->num_rows();
 $vars['lti_peer_assessment']['total_students'] = array("label" => "Total Students: ",  "value" => $total_students);
 
 $completed_peer_assessment = 0;
