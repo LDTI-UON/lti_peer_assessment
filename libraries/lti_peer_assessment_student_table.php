@@ -4,7 +4,7 @@ $sample_members = ee()->config->item('sample_members');
 
 ee()->db->where(array("lti_peer_assessments.resource_link_id" => $resource_link_id));
 ee()->db->join("lti_group_contexts", "lti_group_contexts.member_id = lti_peer_assessments.assessor_member_id");
-ee()->db->where_not_in('member_id', $sample_members);
+ee()->db->where_not_in('lti_group_contexts.member_id', $sample_members["ids"]);
 ee()->db->group_by("assessor_member_id");
 $res = ee()->db->get("lti_peer_assessments");
 $total_students = $res->num_rows();
