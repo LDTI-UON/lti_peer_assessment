@@ -467,6 +467,7 @@ private function _feedback_query($score_toggle) {
             return;
         }
         $is_preview = ee()->config->_global_vars['is_preview_user'];
+        echo "<h1 style='display:none'>$is_preview</h1>";
         $variables = array();
         $variable_row = array();
 
@@ -1090,8 +1091,7 @@ public function form()
         }
 
         foreach($array as $key => $row) {
-          if(/*$row['resource_link_id'] != $this->lti_object->resource_link_id ||*/
-          in_array($row['member_id'], $dupes) ) {
+          if(in_array($row['member_id'], $dupes) ) {
               unset($array[$key]);
           } else {
               array_push($dupes, $row['member_id']);
