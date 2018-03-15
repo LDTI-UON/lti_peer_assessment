@@ -1,3 +1,4 @@
+
 <?php
 # @Author: ps158
 # @Date:   2017-03-28T09:28:19+11:00
@@ -823,14 +824,12 @@ private function removeSpaceFillers($group_name)
     ee()->db->join("lti_peer_assessments", "lti_peer_assessments.group_context_id = lti_group_contexts.id", "left outer");
 
     $where = array(
-                  "lti_group_contexts.group_id" => $assessor_group_id,
-
-                  "lti_peer_assessments.resource_link_id" => $resource_link_id
-
+                  "lti_group_contexts.group_id" => $assessor_group_id
                 );
 
     if(!$preview) {
         $where["lti_peer_assessments.assessor_member_id"] = $member_id;
+        $where["lti_peer_assessments.resource_link_id"] = $resource_link_id;
     }
 
     // exclusive query here...
@@ -995,7 +994,7 @@ public function form()
 
     $is_preview = ee()->config->_global_vars['is_preview_user'];
 
-    if(! $is_preview) {
+    if(empty($is_preview) ) {
           $mrow = $this->get_user_credentials($member_id);
 
           if ($mrow == null) {
@@ -1005,13 +1004,13 @@ public function form()
           $assessor_group_id = $mrow->group_id;
           $assessor_group_context_id = $mrow->id;
     } else {
-          ee()->db->select(array("id","group_id"));
-          ee()->db->from("lti_group_contexts");
-          ee()->db->where(array("context_id" => 'universal'));
-          $r = ee()->db->get();
-
-          $assessor_group_id = $r->row()->group_id;
-          $assessor_group_context_id = $r->row()->id;
+          $sample_users = ee()->db->select(array("id","group_id"))->from("lti_group_contexts")->where(array("context_id" => 'universal'))->get();
+          $d = var_export($sample_users, TRUE);
+          ee()->logger->developer($d);
+          $assessor_group_id = $sample_users->row()->group_id;
+          ee()->logger->developer($assessor_group_id);
+          $assessor_group_context_id = $sample_users->row()->id;
+          ee()->logger->developer($assessor_group_context_id);
     }
 
     $save_message = '';
@@ -2091,7 +2090,7 @@ $objWriter = PHPExcel_IOFactory::createWriter($mainDocument, 'Excel2007');
 
             ee()->load->helper('form');
             $form .= '<p>Download the current list of peer assessments.</p>';
-            $form .= form_open_multipart(static::$apeg_url.'/'.ee()->uri->uri_string());
+            $form .= form_multipart(static::$apeg_url.'/'.ee()->uri->uri_string());
             $form .= form_hidden('peer_assess_action', 'download_peer_assessments');
             $form .= form_submit('submit', 'Download', $this->lti_object->form_submit_class);
             $form .= "<p>$message</p>";
