@@ -1006,11 +1006,8 @@ public function form()
     } else {
           $sample_users = ee()->db->select(array("id","group_id"))->from("lti_group_contexts")->where(array("context_id" => 'universal'))->get();
           $d = var_export($sample_users, TRUE);
-          ee()->logger->developer($d);
           $assessor_group_id = $sample_users->row()->group_id;
-          ee()->logger->developer($assessor_group_id);
           $assessor_group_context_id = $sample_users->row()->id;
-          ee()->logger->developer($assessor_group_context_id);
     }
 
     $save_message = '';
@@ -1132,15 +1129,14 @@ public function form()
                       //echo "Numrows: ".$r->num_rows().BR;
                     } while ($r->num_rows() > 0);
                         /* check for current assessment */
-                        ee()->db->distinct('assessor_member_id', 'member_id', 'group_id');
+                        /* changed for EE v3.2.0 was: 'assessor_member_id', 'member_id', 'group_id'*/
+                        ee()->db->distinct();
 
                         $where = array('assessor_member_id' => $member_id,
                                             'group_id' => $assessor_group_id,
                                             'group_context_id' => $asmrow['group_context_id'],
                                             'member_id' => $asmrow['member_id'],
-                                            'resource_link_id' => $this->lti_object->resource_link_id
-
-                                          /*'current' => 1*/);
+                                            'resource_link_id' => $this->lti_object->resource_link_id);
 
                         ee()->db->where($where);
                       //  ee()->db->or_where(array("TMP_POST_ID" => $str_random));
@@ -1149,7 +1145,7 @@ public function form()
 
                         if($asmrow['group_context_id'] !== PREVIEW_CONTEXT) {
                                 if ($peer_res->num_rows() == 0) {
-                                    ee()->db->distinct('assessor_member_id', 'member_id', 'group_id');
+                                    ee()->db->distinct();
                                     /* if instructor has unlocked previous assessment : */
                                     $where = array('assessor_member_id' => $member_id,
                                                       'group_id' => $assessor_group_id,
@@ -2171,10 +2167,10 @@ public function download_csv()
 
             ee()->load->helper('download');
 
-            $file = @tempnam('lti_uploads', 'tmp_');
+            $dl = ee()->config->item('lti_downloads');
+            $file = tempnam($dl, 'tmp_');
             $handle = fopen($file, 'w+b');
 
-            //echo "<b>Count: ".count($totals)."</b>";
             if (count($totals) > 0) {
                 fputcsv($handle, array($this->lti_object->course_name.' peer assessments'));
 
