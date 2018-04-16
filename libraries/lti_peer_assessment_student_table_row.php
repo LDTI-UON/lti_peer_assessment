@@ -53,8 +53,9 @@ if(!array_key_exists($plugin, $vars['student_table_classes'])) {
       $action_id = $result->row()->action_id;
       $vars['student_table_actions'][$plugin]['helper_user_has_assessed'] = $action_id;
 }
-
+ee()->logger->developer('isset group_id section...');
 if(isset($row['group_id'])) {
+  ee()->logger->developer(var_export($row, TRUE));
     ee()->db->where(array("member_id" => $row['member_id'], "group_context_id" => $row['group_context_id'], "group_id" => $row["group_id"]));
     $result = ee()->db->limit(1)->get('lti_peer_assessments');
     $ra = $result->row();
