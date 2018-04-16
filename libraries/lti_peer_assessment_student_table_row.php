@@ -21,7 +21,7 @@ $action_id = 0;
 if(!array_key_exists($plugin, $vars['student_table_plugin_headers'])) {
   $header7 = ee()->session->userdata('group_id') === 1 ? lang('student_table_header7') : '';
   $vars['student_table_plugin_headers'][$plugin] = array_merge($vars['student_table_plugin_headers'], !empty($header7) ? array(lang('student_table_header6'), $header7) : array(lang('student_table_header6')) );
-  $vars['student_table_plugin_col_indexes'][$plugin] = array_merge($vars['student_table_plugin_col_indexes'], !empty($header7) ? array('lti_peer_assessment_unlock', 'lti_peer_assessment_clear') : array(lang('student_table_header6')));
+  $vars['student_table_plugin_col_indexes'][$plugin] = array_merge($vars['student_table_plugin_col_indexes'], !empty($header7) ? array('lti_peer_assessment_unlock', 'lti_peer_assessment_clear') : array('lti_peer_assessment_unlock'));
 }
 if(!array_key_exists($plugin, $vars['student_table_scripts'])) {
   $vars['student_table_scripts'][$plugin] = file_get_contents(PATH_THIRD."$plugin/js/$plugin"."_student_table.js");
@@ -53,21 +53,16 @@ if(!array_key_exists($plugin, $vars['student_table_classes'])) {
       $action_id = $result->row()->action_id;
       $vars['student_table_actions'][$plugin]['helper_user_has_assessed'] = $action_id;
 }
-ee()->logger->developer('group_id section...');
+
 if(isset($row['group_id'])) {
 
     ee()->db->where(array("member_id" => $row['member_id'], "group_context_id" => $row['group_context_id'], "group_id" => $row["group_id"]));
     $result = ee()->db->limit(1)->get('lti_peer_assessments');
     $ra = $result->row();
 
-    //$instructor_group_mark = isset($ra->instructor_group_mark) ? $ra->instructor_group_mark : "";
-    //$vars['students'][$row['member_id']]['instructor_group_mark'] = $result['instructor_group_mark'];
-    ee()->logger->developer("==== \$students:");
-    ee()->logger->developer(var_export($vars['students'], TRUE));
     $vars['students'][$row['member_id']]['lti_peer_assessment_unlock'] = "<button class='$this->button_class lti_peer_assessment_unlock' data-id='$row[member_id]' data-cxt='$row[group_id]' data-resource-link-id='$resource_link_id' data-igm='$instructor_group_mark'>Unlock</button>";
-    ee()->logger->developer("==== \$after students (before this):");
-    ee()->logger->developer(var_export($vars['students'], TRUE));
-    if(ee()->session->userdata('group_id') == 1) {
+
+    if(ee()->session->userdata('group_id') === 1) {
         $vars['students'][$row['member_id']]['lti_peer_assessment_clear'] = "<button class='$this->button_class btn-danger lti_peer_assessment_clear' data-id='$row[member_id]' data-cxt='$row[group_id]' data-resource-link-id='$resource_link_id'>Clear</button>";
     }
 }
