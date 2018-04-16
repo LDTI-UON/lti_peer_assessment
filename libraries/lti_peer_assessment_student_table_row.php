@@ -55,11 +55,12 @@ if(!array_key_exists($plugin, $vars['student_table_classes'])) {
 }
 ee()->logger->developer('isset group_id section...');
 if(isset($row['group_id'])) {
+  ee()->logger->developer("==== \$row:");
   ee()->logger->developer(var_export($row, TRUE));
     ee()->db->where(array("member_id" => $row['member_id'], "group_context_id" => $row['group_context_id'], "group_id" => $row["group_id"]));
     $result = ee()->db->limit(1)->get('lti_peer_assessments');
     $ra = $result->row();
-
+    ee()->logger->developer("==== \$ra:");
     ee()->logger->developer(var_export($ra, TRUE));
   //  ee()->logger->developer(var_export($ra))
 
