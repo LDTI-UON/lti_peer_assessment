@@ -20,8 +20,8 @@ $action_id = 0;
 
 if(!array_key_exists($plugin, $vars['student_table_plugin_headers'])) {
   $header7 = ee()->session->userdata('group_id') === 1 ? lang('student_table_header7') : '';
-  $vars['student_table_plugin_headers'][$plugin] = array_merge($vars['student_table_plugin_headers'], $header7 ? array(lang('student_table_header6'), $header7) : array(lang('student_table_header6')) );
-  $vars['student_table_plugin_col_indexes'][$plugin] = array_merge($vars['student_table_plugin_col_indexes'], $header7 ? array('lti_peer_assessment_unlock', 'lti_peer_assessment_clear') : array(lang('student_table_header6')));
+  $vars['student_table_plugin_headers'][$plugin] = array_merge($vars['student_table_plugin_headers'], !empty($header7) ? array(lang('student_table_header6'), $header7) : array(lang('student_table_header6')) );
+  $vars['student_table_plugin_col_indexes'][$plugin] = array_merge($vars['student_table_plugin_col_indexes'], !empty($header7) ? array('lti_peer_assessment_unlock', 'lti_peer_assessment_clear') : array(lang('student_table_header6')));
 }
 if(!array_key_exists($plugin, $vars['student_table_scripts'])) {
   $vars['student_table_scripts'][$plugin] = file_get_contents(PATH_THIRD."$plugin/js/$plugin"."_student_table.js");
