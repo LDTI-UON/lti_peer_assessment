@@ -2795,8 +2795,9 @@ private function instructor_report($max_assessors = 0)
 
             $map_new[$k] = $new_row;
           }
-
-          echo json_encode($map_new);
+          $json = json_encode($map_new);
+          echo $json;
+          
           exit();
     }
 
