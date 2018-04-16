@@ -65,7 +65,8 @@ if(isset($row['group_id'])) {
     ee()->logger->developer("==== \$students:");
     ee()->logger->developer(var_export($vars['students'], TRUE));
     $vars['students'][$row['member_id']]['lti_peer_assessment_unlock'] = "<button class='$this->button_class lti_peer_assessment_unlock' data-id='$row[member_id]' data-cxt='$row[group_id]' data-resource-link-id='$resource_link_id' data-igm='$instructor_group_mark'>Unlock</button>";
-
+    ee()->logger->developer("==== \$after students (before this):");
+    ee()->logger->developer(var_export($vars['students'], TRUE));
     if(ee()->session->userdata('group_id') == 1) {
         $vars['students'][$row['member_id']]['lti_peer_assessment_clear'] = "<button class='$this->button_class btn-danger lti_peer_assessment_clear' data-id='$row[member_id]' data-cxt='$row[group_id]' data-resource-link-id='$resource_link_id'>Clear</button>";
     }
