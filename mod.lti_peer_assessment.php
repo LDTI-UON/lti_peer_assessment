@@ -2696,11 +2696,14 @@ private function instructor_report($max_assessors = 0)
             }
 
             if($allow_self_assessment && isset($self_score[$row['member_id']])) {
-                $mean_score_for_sapa = $totals[$row['member_id']] / ($members_assessed_this_student[$row['member_id']] - 1);
-                $val = $self_score[$row['member_id']] / $mean_score_for_sapa;
-                $val = sqrt($val);
+              $csv_rows[$row['member_id']][10] = 0;
+              if(!empty($totals[$row['member_id']]) && !empty(($members_assessed_this_student[$row['member_id']] - 1))) {
+                  $mean_score_for_sapa = $totals[$row['member_id']] / ($members_assessed_this_student[$row['member_id']] - 1);
+                  $val = $self_score[$row['member_id']] / $mean_score_for_sapa;
+                  $val = sqrt($val);
 
-                $csv_rows[$row['member_id']][10] = round($val, 2, PHP_ROUND_HALF_DOWN);
+                  $csv_rows[$row['member_id']][10] = round($val, 2, PHP_ROUND_HALF_DOWN);
+              }
             }
           } else {
             $mean_score = 0;
@@ -2711,7 +2714,8 @@ private function instructor_report($max_assessors = 0)
     unset($results);
     unset($totals);
     unset($members_assessed_this_student);
-
+    ee()->logger->developer(var_export($csv_rows, TRUE));
+    
     return array("csv_rows" => $csv_rows, "total_score" => $rubric_total, "algorithm" => $score_calc);
 }
     private function __current_submission_where_clause($member_id, $group_id, $resource_link_id) {
@@ -2797,7 +2801,7 @@ private function instructor_report($max_assessors = 0)
           }
           $json = json_encode($map_new);
           echo $json;
-          
+
           exit();
     }
 
