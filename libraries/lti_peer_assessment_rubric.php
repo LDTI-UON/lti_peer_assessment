@@ -1,9 +1,6 @@
 <?php
 $raw_id = ee()->input->get('rubric_id');
 
-echo "<pre>";
-echo $raw_id;
-
 $parsed = explode("|", $raw_id);
 
 $rubric_id = $parsed[0];

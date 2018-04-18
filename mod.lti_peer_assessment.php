@@ -468,7 +468,6 @@ private function _feedback_query($score_toggle) {
             return;
         }
         $is_preview = ee()->config->_global_vars['is_preview_user'];
-        echo "<h1 style='display:none'>$is_preview</h1>";
         $variables = array();
         $variable_row = array();
 
@@ -929,9 +928,6 @@ private function removeSpaceFillers($group_name)
   foreach($res->result_array as $row) {
     $row = array_merge($rli, $row);
 
-    echo "<pre>";
-    var_dump($row);
-    echo "</pre>";
   //  $aff = ee()->db->insert("lti_peer_assessments", $row);
 
 }*/
@@ -2714,8 +2710,7 @@ private function instructor_report($max_assessors = 0)
     unset($results);
     unset($totals);
     unset($members_assessed_this_student);
-    ee()->logger->developer(var_export($csv_rows, TRUE));
-    
+
     return array("csv_rows" => $csv_rows, "total_score" => $rubric_total, "algorithm" => $score_calc);
 }
     private function __current_submission_where_clause($member_id, $group_id, $resource_link_id) {
