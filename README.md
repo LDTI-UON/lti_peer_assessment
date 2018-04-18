@@ -1,18 +1,18 @@
 # README #
 
-## Peer Assessment plugin for ExpressionEngine(EE) 3 ##
+## Peer Assessment plugin for ExpressionEngine(EE) ##
 
 Provides a form that allows students to grade other group members' contributions. Instructors download an Excel report that provides a full breakdown and mean score of all group members' peer review.
 
-This plugin requires [EE3 Learning Tools Integration](https://github.com/BOLDLab/learning_tools_integration)
+This plugin requires [EE Learning Tools Integration](https://github.com/BOLDLab/learning_tools_integration)
 
 ## New in Version 0.8.4 ##
 Added instructor preview group.  This provides the same group for every course instructor as an example when accessing via student preview in Blackboard Learn<sup>&copy;</sup>.
 
 ## Quick Setup Guide ##
 
-* Download [EE3 Learning Tools Integration](https://github.com/BOLDLab/learning_tools_integration)
-* Install using the [EE3 add-on installation instructions](https://docs.expressionengine.com/latest/cp/addons/index.html).
+* Download [EE Learning Tools Integration](https://github.com/BOLDLab/learning_tools_integration)
+* Install using the [EE add-on installation instructions](https://docs.expressionengine.com/latest/cp/addons/index.html).
 
 ## EE Tags Provided ##
 ```
@@ -78,10 +78,16 @@ Get maximum score for assessment derived from rubric or added in settings.
 Renders a table containing all group members and input fields for score, comments.  Any attached rubric will replace the score text input field automagically with a button to open that rubric.
 
 ```
+{exp:lti_peer_assessment:download_csv}
+```
+
+Download an CSV report for instructors containing a breakdown of all peer-assessed students.
+
+```
 {exp:lti_peer_assessment:download_excel}
 ```
 
-Download an excel report for instructors containing a breakdown of all peer-assessed students.
+**EXPERIMENTAL** Download an excel report for instructors containing a breakdown of all peer-assessed students.
 
 ```
 {exp:lti_peer_assessment:help_link section='section_name' [sub_section='sub_section']}
