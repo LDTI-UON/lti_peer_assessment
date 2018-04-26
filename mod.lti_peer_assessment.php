@@ -2596,7 +2596,7 @@ private function instructor_report($max_assessors = 0)
                       $assessor_member_name = $amr->screen_name.' ('.$amr->username.')';
 
                       $score_perc = empty($rubric_total) ? "N/A" : floor(($row['score'] / $rubric_total) * 100);
-                      $assessor_member_name .= chr(13)." Gave mark: $row[score]/$rubric_total | $score_perc% ".chr(13).chr(13);
+                      $assessor_member_name .= chr(13)." Gave mark to $row[screen_name]: $row[score]/$rubric_total | $score_perc% ".chr(13).chr(13);
 
                       if (!array_key_exists($row['member_id'], $csv_rows)) {
                             $members_assessed_this_student[$row['member_id']] = 0;
@@ -2621,10 +2621,10 @@ private function instructor_report($max_assessors = 0)
                     // for SPA calcualtion
                     $group_totals[$row['group_id']][$row['member_id']] = $totals[$row['member_id']];
 
-                    $csv_rows[$row['member_id']][8] .= $assessor_member_name."Comment: ".chr(13).$row['comment'].chr(13).'---------------'.chr(13);
+                    $csv_rows[$row['member_id']][8] .= $assessor_member_name."Comment about $row[screen_name]: ".chr(13).$row['comment'].chr(13).'---------------'.chr(13);
       }
     }
-
+    //ee()->logger->developer(var_export($csv_rows,TRUE));
     $sc = static::$plugin_settings['score_calculation'];
 
     $score_calc = "";
@@ -2643,6 +2643,8 @@ private function instructor_report($max_assessors = 0)
           }
         }
     }
+
+    $group_spa_total = array();
 
     foreach ($results->result_array() as $row) {
       if(isset($members_assessed_this_student[$row['member_id']])) {
@@ -2668,16 +2670,28 @@ private function instructor_report($max_assessors = 0)
             }
 
             $spa_mean_score = number_format($spa_mean_score, 2);
+            //  ee()->logger->developer("SPA Mean: $spa_mean_score");
 
-            if($spa_mean_score > 1.9) {
-                $spa_mean_score = "$spa_mean_score ( skewed due to too few assessors)";
-            }
+              if(!isset($group_spa_total[$row['group_id']])) {
+                  $group_spa_total[$row['group_id']]['spa'] = 0;
+              }
+
+              if(!isset($group_spa_total[$row['group_id']]['members_counted'])) {
+                  $group_spa_total[$row['group_id']]['members_counted'] = array();
+              }
+              if(! in_array($row['member_id'], $group_spa_total[$row['group_id']]['members_counted'])) {
+
+                  $group_spa_total[$row['group_id']]['spa'] += $spa_mean_score;
+
+                  array_push($group_spa_total[$row['group_id']]['members_counted'], $row['member_id']);
+              }
 
             $mean_score = $totals[$row['member_id']] / $members_assessed_this_student[$row['member_id']];
 
             $csv_rows[$row['member_id']][4] = round($mean_score, 0, PHP_ROUND_HALF_DOWN);
             $csv_rows[$row['member_id']][5] = $spa_mean_score;//round(sqrt($spa_mean_score), 2, PHP_ROUND_HALF_DOWN); // SPA score multiplier
             $csv_rows[$row['member_id']][7] = $members_assessed_this_student[$row['member_id']];
+            $group_spa_total[$row['group_id']]['member_count'] = $members_assessed_this_student[$row['member_id']];
 
             $adjusted_score = "N/A";
 
@@ -2707,12 +2721,22 @@ private function instructor_report($max_assessors = 0)
       }
     }
 
+    foreach ($group_spa_total as $group) {
+        $offset = ($group['spa'] - $group['member_count']) / $group['member_count'];
+
+        foreach($group['members_counted'] as $member_id) {
+                $csv_rows[$member_id][5] = $csv_rows[$member_id][5] - $offset;
+        }
+    }
+
+    unset($group_spa_total);
     unset($results);
     unset($totals);
     unset($members_assessed_this_student);
 
     return array("csv_rows" => $csv_rows, "total_score" => $rubric_total, "algorithm" => $score_calc);
-}
+  }
+
     private function __current_submission_where_clause($member_id, $group_id, $resource_link_id) {
           if($member_id === NULL) {
               return array("group_id" => $group_id, "resource_link_id" => $resource_link_id);
