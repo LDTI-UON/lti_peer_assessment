@@ -33,11 +33,20 @@ $(document).ready(function() {
 
 			var formok = true;
 			var confirmed = false;
-			$("input[type='text']").each(function() {
-				var me = this;
+			$("input[type='text'], tr .student_assess").each(function() {
+				var me;
+				//console.log(this.className);
+				if (this.className === 'student_assess') {
+						me = $(this).next	("#openRubric")[0];
+						//console.log("THis:" .this);
+						console.log(me);
+				} else {
+				 		me = this;
+			 	}
+
 				$(me).css('border', 'none');
-				if(isNaN($(this).val())) {
-					$(me).css('border', '2px solid red');
+				if(String(this.value).length == 0 || isNaN(this.value)) {
+					$(me).css({'border': '2px solid red'});
 					formok = false;
 				}
 			});

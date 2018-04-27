@@ -2170,7 +2170,7 @@ public function download_csv()
             if (count($totals) > 0) {
                 fputcsv($handle, array($this->lti_object->course_name.' peer assessments'));
 
-                $header = array('Full Name', 'Student No', 'Group No', 'Group Name', "Mean Score /$total_possible", "SPA Multiplier [$algorithm]", 'No. Group Members', 'No. Peers Assessed this Student', 'Comments', 'Moderated Group Grade', $allow_self_assessment ? "SAPA" : null);
+                $header = array('First Name', 'Last Name(s)', 'Student No', 'Group No', 'Group Name', "Mean Score /$total_possible", "SPA Multiplier [$algorithm]", 'No. Group Members', 'No. Peers Assessed this Student', 'Comments', 'Moderated Group Grade', $allow_self_assessment ? "SAPA" : null);
 
                 fputcsv($handle, $header);
 
@@ -2592,36 +2592,39 @@ private function instructor_report($max_assessors = 0)
 
 
         if($amr !== NULL) {
+              $assessor_member_name = $amr->screen_name.' ('.$amr->username.')';
 
-                      $assessor_member_name = $amr->screen_name.' ('.$amr->username.')';
+              $score_perc = empty($rubric_total) ? "N/A" : floor(($row['score'] / $rubric_total) * 100);
+              $assessor_member_name .= chr(13)." Gave mark to $row[screen_name]: $row[score]/$rubric_total | $score_perc% ".chr(13).chr(13);
 
-                      $score_perc = empty($rubric_total) ? "N/A" : floor(($row['score'] / $rubric_total) * 100);
-                      $assessor_member_name .= chr(13)." Gave mark to $row[screen_name]: $row[score]/$rubric_total | $score_perc% ".chr(13).chr(13);
+              if (!array_key_exists($row['member_id'], $csv_rows)) {
+                    $members_assessed_this_student[$row['member_id']] = 0;
+                    $totals[$row['member_id']] = 0;
+                    $peer_ratings[$row['group_id']][$row['member_id']] = array();
+                    $names = explode(" ", $row['screen_name']);
+                    $fname = $names[0];
+                    unset($names[0]);
+                    $lnames = implode(" ", $names);
+                    $csv_rows[$row['member_id']] = array($fname, $lnames, $row['username'], $row['group_id'], $row['group_name'], 0,
+                            0, $group_counts[$row['group_id']], 1, "", 0, $allow_self_assessment ? 0 : NULL);
+              }
 
-                      if (!array_key_exists($row['member_id'], $csv_rows)) {
-                            $members_assessed_this_student[$row['member_id']] = 0;
-                            $totals[$row['member_id']] = 0;
-                            $peer_ratings[$row['group_id']][$row['member_id']] = array();
-                            $csv_rows[$row['member_id']] = array($row['screen_name'], $row['username'], $row['group_id'], $row['group_name'], 0,
-                                    0, $group_counts[$row['group_id']], 1, "", 0, $allow_self_assessment ? 0 : NULL);
-                      }
+            if($amr->member_id == $row['member_id']) {
+                $self_score[$row['member_id']] = $row['score'];
+            }
 
-                    if($amr->member_id == $row['member_id']) {
-                        $self_score[$row['member_id']] = $row['score'];
-                    }
+            $score = $row['score'];
+            $members_assessed_this_student[$row['member_id']] = $members_assessed_this_student[$row['member_id']] + 1;  // count assessments (not all members may assess)
+            $max_assessors = $members_assessed_this_student[$row['member_id']] > $max_assessors ? $members_assessed_this_student[$row['member_id']] : $max_assessors;
 
-                    $score = $row['score'];
-                    $members_assessed_this_student[$row['member_id']] = $members_assessed_this_student[$row['member_id']] + 1;  // count assessments (not all members may assess)
-                    $max_assessors = $members_assessed_this_student[$row['member_id']] > $max_assessors ? $members_assessed_this_student[$row['member_id']] : $max_assessors;
+            $totals[$row['member_id']] = $totals[$row['member_id']] + $score;
 
-                    $totals[$row['member_id']] = $totals[$row['member_id']] + $score;
+            $peer_ratings[$row['group_id']][$row['member_id']][] = $score;
 
-                    $peer_ratings[$row['group_id']][$row['member_id']][] = $score;
+            // for SPA calcualtion
+            $group_totals[$row['group_id']][$row['member_id']] = $totals[$row['member_id']];
 
-                    // for SPA calcualtion
-                    $group_totals[$row['group_id']][$row['member_id']] = $totals[$row['member_id']];
-
-                    $csv_rows[$row['member_id']][8] .= $assessor_member_name."Comment about $row[screen_name]: ".chr(13).$row['comment'].chr(13).'---------------'.chr(13);
+            $csv_rows[$row['member_id']][9] .= $assessor_member_name."Comment about $row[screen_name]: ".chr(13).$row['comment'].chr(13).'---------------'.chr(13);
       }
     }
     //ee()->logger->developer(var_export($csv_rows,TRUE));
@@ -2688,9 +2691,9 @@ private function instructor_report($max_assessors = 0)
 
             $mean_score = $totals[$row['member_id']] / $members_assessed_this_student[$row['member_id']];
 
-            $csv_rows[$row['member_id']][4] = round($mean_score, 0, PHP_ROUND_HALF_DOWN);
-            $csv_rows[$row['member_id']][5] = $spa_mean_score;//round(sqrt($spa_mean_score), 2, PHP_ROUND_HALF_DOWN); // SPA score multiplier
-            $csv_rows[$row['member_id']][7] = $members_assessed_this_student[$row['member_id']];
+            $csv_rows[$row['member_id']][5] = round($mean_score, 0, PHP_ROUND_HALF_DOWN);
+            $csv_rows[$row['member_id']][6] = $spa_mean_score;//round(sqrt($spa_mean_score), 2, PHP_ROUND_HALF_DOWN); // SPA score multiplier
+            $csv_rows[$row['member_id']][8] = $members_assessed_this_student[$row['member_id']];
             $group_spa_total[$row['group_id']]['member_count'] = $members_assessed_this_student[$row['member_id']];
 
             $adjusted_score = "N/A";
@@ -2700,19 +2703,19 @@ private function instructor_report($max_assessors = 0)
             if(!empty($assignment_score)) {
                 $adjusted_score = floor($spa_mean_score * $assignment_score);
                 $adjusted_score = $adjusted_score > $assignment_score ? $assignment_score : $adjusted_score;
-                $csv_rows[$row['member_id']][9] = $adjusted_score;
+                $csv_rows[$row['member_id']][10] = $adjusted_score;
             } else {
-                $csv_rows[$row['member_id']][9] = "N/A";
+                $csv_rows[$row['member_id']][10] = "N/A";
             }
 
             if($allow_self_assessment && isset($self_score[$row['member_id']])) {
-              $csv_rows[$row['member_id']][10] = 0;
+              $csv_rows[$row['member_id']][11] = 0;
               if(!empty($totals[$row['member_id']]) && !empty(($members_assessed_this_student[$row['member_id']] - 1))) {
                   $mean_score_for_sapa = $totals[$row['member_id']] / ($members_assessed_this_student[$row['member_id']] - 1);
                   $val = $self_score[$row['member_id']] / $mean_score_for_sapa;
                   $val = sqrt($val);
 
-                  $csv_rows[$row['member_id']][10] = round($val, 2, PHP_ROUND_HALF_DOWN);
+                  $csv_rows[$row['member_id']][11] = round($val, 2, PHP_ROUND_HALF_DOWN);
               }
             }
           } else {
@@ -2721,15 +2724,22 @@ private function instructor_report($max_assessors = 0)
       }
     }
 
-    foreach ($group_spa_total as $group) {
-        $offset = ($group['spa'] - $group['member_count']) / $group['member_count'];
+  /*  foreach ($group_spa_total as $group) {
+        $offset = ($group['spa'] - $group['member_count']) / $group_counts[$row['group_id']];
 
         foreach($group['members_counted'] as $member_id) {
-                $csv_rows[$member_id][5] = $csv_rows[$member_id][5] - $offset;
+              if($csv_rows[$member_id][6] > 0) {
+                //  if($group_counts[$row['group_id']] === $group['member_count']) {
+                    $diff = $csv_rows[$member_id][6] - $offset;
+                    $csv_rows[$member_id][6] = $diff > 0 ? $diff : 0;
+                //  }
+              } else {
+                    $csv_rows[$member_id][6] = 0;
+              }
         }
     }
 
-    unset($group_spa_total);
+    unset($group_spa_total);*/
     unset($results);
     unset($totals);
     unset($members_assessed_this_student);
