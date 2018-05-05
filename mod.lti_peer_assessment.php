@@ -2164,31 +2164,37 @@ public function download_csv()
             ee()->load->helper('download');
 
             $dl = ee()->config->item('lti_downloads');
-            $file = tempnam($dl, 'tmp_');
-            $handle = fopen($file, 'w+b');
+            //$file = tempnam($dl, 'tmp_');
+            $file = fopen('php://memory', 'w');
 
             if (count($totals) > 0) {
-                fputcsv($handle, array($this->lti_object->course_name.' peer assessments'));
+                fputcsv($file, array($this->lti_object->course_name.' peer assessments'));
 
                 $header = array('First Name', 'Last Name(s)', 'Student No', 'Group No', 'Group Name', "Mean Score /$total_possible", "SPA Multiplier [$algorithm]", 'No. Group Members', 'No. Peers Assessed this Student', 'Comments', 'Moderated Group Grade', $allow_self_assessment ? "SAPA" : null);
 
-                fputcsv($handle, $header);
-
+                fputcsv($file, $header);
                 foreach ($totals as $line) {
-                    $line = str_replace("\r\n", "\n", $line);
-                    fputcsv($handle, $line);
+                  if($line) {
+                      //$line = str_replace("\r\n", "\n", $line);
+                      fputcsv($file, $line);
+                  }
                 }
+
             } else {
                 $message .= "<span style='color:darkred'><b>No assessments to download</b><br></span>";
             }
+            // updated this force download section 5-5-2018  ( DO NOT USE force_download() !!! )
+            // from answer here:
+            // https://stackoverflow.com/questions/16251625/how-to-create-and-download-a-csv-file-from-php-script#answer-16251849
+            fseek($file, 0);
+            // tell the browser it's going to be a csv file
+            header('Content-Type: application/csv');
+            // tell the browser we want to save it instead of displaying it
+            header('Content-Disposition: attachment; filename="'.$this->lti_object->course_name.' Assessments.csv'.'";');
+            // make php send the generated csv lines to the browser
+            fpassthru($file);
 
-            $data = file_get_contents($file);
-
-            $data = mb_convert_encoding($data, 'UTF-8');
-
-            unlink($file);
-
-            force_download($this->lti_object->course_name.' Assessments.csv', $data);
+            exit;
         }
 
         ee()->load->helper('form');
@@ -2723,7 +2729,8 @@ private function instructor_report($max_assessors = 0)
         }
       }
     }
-
+  //  var_export($csv_rows);
+    //ee()->logger->developer(var_export($csv_rows, TRUE));
   /*  foreach ($group_spa_total as $group) {
         $offset = ($group['spa'] - $group['member_count']) / $group_counts[$row['group_id']];
 
