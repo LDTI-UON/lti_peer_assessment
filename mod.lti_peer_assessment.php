@@ -2175,7 +2175,7 @@ public function download_csv()
                 fputcsv($file, $header);
                 foreach ($totals as $line) {
                   if($line) {
-                      //$line = str_replace("\r\n", "\n", $line);
+                      $line = str_replace("\r\n", "\n", $line);
                       fputcsv($file, $line);
                   }
                 }
