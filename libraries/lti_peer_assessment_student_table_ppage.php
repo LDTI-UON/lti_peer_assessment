@@ -14,7 +14,7 @@ if($sub) {
 }
 
 $ppage_output .= "<p>
-                  <label for='filter_submitted1'>Students submitted: ".form_radio(array('name' => 'filter_submitted', 'id' => 'filter_submitted1', 'value' => 's', 'checked' => $selected1))."</label>";
-$ppage_output .= "<label for='filter_submitted2'>Students not submitted: </label>".form_radio(array('name' => 'filter_submitted', 'id' => 'filter_submitted2', 'value' => 'ns', 'checked' => $selected2))."</label>";
+                  <label for='filter_submitted1'>Students submitted: ".form_checkbox(array('name' => 'filter_submitted', 'id' => 'filter_submitted1', 'value' => 's', 'checked' => $selected1))."</label>";
+$ppage_output .= "<label for='filter_submitted2'>Students not submitted: </label>".form_checkbox(array('name' => 'filter_submitted', 'id' => 'filter_submitted2', 'value' => 'ns', 'checked' => $selected2))."</label>";
 $ppage_output .= "<br><button id='clear_filters' name='clear_filters' class='btn btn-default' title='Clear Search Filters'>Clear Filters</button></p> "
 ?>
