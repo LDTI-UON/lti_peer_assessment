@@ -194,7 +194,7 @@ $(document).ready(function() {
   	});
 
     $('button#clear_filters').bind("click", function(e) {
-        e.target.preventDefault();
+        e.preventDefault();
         $('input[name=filter_submitted], input#st_search').attr('checked', '');
     });
 });
