@@ -192,4 +192,8 @@ $(document).ready(function() {
     $('input[name="filter_submitted"]').bind("change", function (e) {
   			 $("form#filters").submit();
   	});
+
+    $('button#clear_filters').bind("click", fuction(e) {
+        $('input[name=filter_submitted]').prop('checked', false);
+    });
 });
