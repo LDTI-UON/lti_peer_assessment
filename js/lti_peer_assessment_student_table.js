@@ -191,6 +191,7 @@ $(document).ready(function() {
 
     $('input[name="filter_submitted"]').bind("click", function (e) {
           $(e.target).closest('input[type=checkbox]').prop("checked", false);
+          $(e.target).prop("checked", true);
   			 $("form#filters").submit();
   	});
 
