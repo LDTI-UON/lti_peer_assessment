@@ -196,7 +196,7 @@ $(document).ready(function() {
     $('button#clear_filters').bind("click", function(e) {
         e.preventDefault();
           $('input[name=filter_submitted]').prop('checked', false);
-          $("form#filters").children('input[name="filter_submitted"]').remove();
+          //$("form#filters").children('input[name="filter_submitted"]').remove();
           $("form#filters").submit();
     });
 });
