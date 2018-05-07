@@ -55,13 +55,11 @@ if(!array_key_exists($plugin, $vars['student_table_classes'])) {
 }
 
 if(isset($row['group_id'])) {
-
-    ee()->db->where(array("member_id" => $row['member_id'], "group_context_id" => $row['group_context_id'], "group_id" => $row["group_id"]));
+    ee()->db->where(array("member_id" => $row['member_id'], "group_context_id" => $row['group_context_id'], "group_id" => $row["group_id"], "resource_link_id" => $this->resource_link_id));
     $result = ee()->db->limit(1)->get('lti_peer_assessments');
     $ra = $result->row();
 
     $instructor_group_mark = isset($ra->instructor_group_mark) ? $ra->instructor_group_mark : "";
-    //$vars['students'][$row['member_id']]['instructor_group_mark'] = $result['instructor_group_mark'];
     $vars['students'][$row['member_id']]['lti_peer_assessment_unlock'] = "<button class='$this->button_class lti_peer_assessment_unlock' data-id='$row[member_id]' data-cxt='$row[group_id]' data-resource-link-id='$resource_link_id' data-igm='$instructor_group_mark'>Unlock</button>";
 
     if(ee()->session->userdata('group_id') === 1) {

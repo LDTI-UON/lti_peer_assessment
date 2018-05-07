@@ -2164,7 +2164,7 @@ public function download_csv()
             ee()->load->helper('download');
 
             $dl = ee()->config->item('lti_downloads');
-            //$file = tempnam($dl, 'tmp_');
+
             $file = fopen('php://memory', 'w');
 
             if (count($totals) > 0) {
@@ -2789,6 +2789,26 @@ private function instructor_report($max_assessors = 0)
           return FALSE;
     }
 
+    private function _get_last_assessment_ids_as_array($member_id = NULL, $group_id, $resource_link_id) {
+          $where = $this->__current_submission_where_clause($member_id, $group_id, $resource_link_id);
+
+          ee()->db->select("id");
+          ee()->db->where($where);
+          $res = ee()->db->get("lti_peer_assessments");
+
+          $ids = array();
+          foreach($res->result_array() as $row) {
+                  $ids[]= array('id' => $row['id'],
+                      'instructor_group_mark' => "0");
+          }
+
+          if(count($ids) > 0) {
+                return $ids;
+          }
+
+          return FALSE;
+    }
+
     public function unlock_last_submission() {
         $affected = 0;
         $member_id = ee()->input->post('id');
@@ -2798,8 +2818,6 @@ private function instructor_report($max_assessors = 0)
         $str = $this->_get_last_assessment_ids($member_id, $group_id, $resource_link_id); // MUST stay in this order!!
 
         if($str !== FALSE) {
-        //  $this->_clear_pointer_to_current($member_id, $group_id, $resource_link_id);
-
           ee()->db->where("`id` IN $str");
           ee()->db->update('lti_peer_assessments', array('locked' => 0));
           $affected += ee()->db->affected_rows();
@@ -2848,16 +2866,20 @@ private function instructor_report($max_assessors = 0)
 
           if($mark == -1) $mark = NULL;
 
-          $str = $this->_get_last_assessment_ids(NULL, $cxt, $rli);
+          $arr = $this->_get_last_assessment_ids_as_array(NULL, $cxt, $rli);
           $affected = 0;
+          if(!$arr) echo json_encode(array("rows_affected" => -1));
 
-          if(strlen(trim($str)) > 0) {
-            ee()->db->where("`id` IN $str");
-            ee()->db->update('lti_peer_assessments',
-                        array('instructor_group_mark' => $mark
-                              ));
+          for($i = 0; $i < count($arr); $i++) {
+                $arr[$i]['instructor_group_mark'] = $mark;
+          }
 
-            $affected += ee()->db->affected_rows();
+          if(count($arr) > 0) {
+            ee()->db->update_batch('lti_peer_assessments',
+                    $arr,
+                    'id');
+
+            $affected = ee()->db->affected_rows();
           }
 
         echo json_encode(array("rows_affected" => $affected));
@@ -2884,7 +2906,6 @@ private function instructor_report($max_assessors = 0)
 
           $affected += ee()->db->affected_rows();
         }
-
 
         echo json_encode(array("rows_affected" => $affected));
         exit();
