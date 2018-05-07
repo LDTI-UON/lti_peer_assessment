@@ -193,9 +193,8 @@ $(document).ready(function() {
   			 $("form#filters").submit();
   	});
 
-    $('#clear_filters').bind("click", fuction(e) {
+    $('button#clear_filters').bind("click", fuction(e) {
         e.target.preventDefault();
-        alert("test");
-        $('input[name=filter_submitted]').attr('checked', '');
+        $('input[name=filter_submitted], input#st_search').attr('checked', '');
     });
 });
