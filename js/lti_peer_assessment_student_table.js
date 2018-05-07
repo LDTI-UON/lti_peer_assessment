@@ -193,8 +193,9 @@ $(document).ready(function() {
   			 $("form#filters").submit();
   	});
 
-    $('button#clear_filters').bind("click", fuction(e) {
-      e.target.preventDefault();
+    $('#clear_filters').bind("click", fuction(e) {
+        e.target.preventDefault();
+        alert("test");
         $('input[name=filter_submitted]').attr('checked', '');
     });
 });
