@@ -190,9 +190,12 @@ $(document).ready(function() {
     });
 
     $('input[name="filter_submitted"]').bind("click", function (e) {
-          $(e.target).closest('input[type=checkbox]').prop("checked", false);
-          $(e.target).prop("checked", true);
-  			 $("form#filters").submit();
+        if(e.target.id === 'filter_submitted1') {
+              $('#filter_submitted2').prop('checked', false);
+        } else {
+              $('#filter_submitted1').prop('checked', false);
+        }
+  			$("form#filters").submit();
   	});
 
     $('button#clear_filters').bind("click", function(e) {
