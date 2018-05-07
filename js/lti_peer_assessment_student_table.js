@@ -190,6 +190,7 @@ $(document).ready(function() {
     });
 
     $('input[name="filter_submitted"]').bind("change", function (e) {
+          $(e.target).closest('input[type=checkbox]').prop("checked", false);
   			 $("form#filters").submit();
   	});
 
