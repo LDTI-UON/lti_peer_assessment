@@ -2578,8 +2578,6 @@ private function instructor_report($max_assessors = 0)
     $self_score = array();
 
     foreach ($results->result_array() as $row) {
-
-
         if (!array_key_exists($row['group_id'], $group_counts)) {
             $count_result = ee()->db->query("SELECT count(*) member_count FROM exp_lti_group_contexts WHERE group_id = '$row[group_id]'");
                     //$form .= var_export($count_result);
@@ -2678,7 +2676,11 @@ private function instructor_report($max_assessors = 0)
                 $spa_mean_score = 0;
             }
 
-            $spa_mean_score = number_format($spa_mean_score, 2);
+            if(isset($spa_mean_score)) {
+                $spa_mean_score = number_format($spa_mean_score, 2);
+            } else {
+                $spa_mean_score = 0;
+            }
             //  ee()->logger->developer("SPA Mean: $spa_mean_score");
 
               if(!isset($group_spa_total[$row['group_id']])) {
@@ -2729,8 +2731,10 @@ private function instructor_report($max_assessors = 0)
         }
       }
     }
+  // remove nulls
+  //$csv_rows = array_filter($csv_rows, function($value) { return $value !== ''; });
   //  var_export($csv_rows);
-    //ee()->logger->developer(var_export($csv_rows, TRUE));
+  //ee()->logger->developer(var_export($csv_rows, TRUE));
   /*  foreach ($group_spa_total as $group) {
         $offset = ($group['spa'] - $group['member_count']) / $group_counts[$row['group_id']];
 
@@ -2914,3 +2918,4 @@ private function instructor_report($max_assessors = 0)
 
 /* End of file mod.learning_tools_integration.php */
 /* Location: /system/expressionengine/third_party/learning_tools_integration/mod.learning_tools_integration.php */
+?>
