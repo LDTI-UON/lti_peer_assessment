@@ -1249,7 +1249,7 @@ public function form()
             $primary_class=$this->lti_object->submit_primary_class;
             $warning_class=$this->lti_object->submit_warning_class;
 
-            $variable_row['form_close'] = "<button $primary_class id='Save' title='Save marks and return to edit later.'>Save</button> $save_message";
+          //$variable_row['form_close'] = "<button $primary_class id='Save' title='Save marks and return to edit later.'>Save</button> $save_message";
             $variable_row['form_close']  .= "<button $warning_class id='assess'>Submit Assessment</button>";
             $variable_row['form_close']  .= form_close();
 

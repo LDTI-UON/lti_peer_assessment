@@ -198,10 +198,10 @@ $(document).ready(function() {
   			$("form#filters").submit();
   	});
 
-    $('button#clear_filters').bind("click", function(e) {
+    $('button#clear_filters').bind("mouseup", function(e) {
         e.preventDefault();
           $('input[name=filter_submitted]').prop('checked', false);
-          //$("form#filters").children('input[name="filter_submitted"]').remove();
+          $('input[name=st_search]')[0].value = "";
           $("form#filters").submit();
     });
 });
