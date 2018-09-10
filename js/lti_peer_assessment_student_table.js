@@ -23,7 +23,7 @@ $('.table tr td:nth-of-type(6) > button').each(function(i, v) {
 });
 
 var o = null;
-
+//console.log(request_obj);
 $("table tr button").prop("disabled", true);
 
 $.post(base_url+"?ACT="+acts.lti_peer_assessment.helper_user_has_assessed,
@@ -31,20 +31,25 @@ $.post(base_url+"?ACT="+acts.lti_peer_assessment.helper_user_has_assessed,
 
     function(res) {
         res = JSON.parse(res);
+        console.log("POST response: ", res);
+        if(typeof res.message !== 'undefined') {
+            console.log(res.message);
+            return false;
+        }
 
         res.forEach(function(v,i) {
 
               var but = $("button[data-id='"+v.id +"']");
               var td = but.parents('tr').find('td:nth-child(1)');
-
+              console.log(v);
               if ( td.hasClass("success") ) {
 
                   if(v.ha && v.cxt) {
                       td.addClass('tick');
                       but.prop("disabled", false);
-                  } else if(v.t && v.cxt) {
+                  } /*else if(v.t && v.cxt) {
                       td.addClass('thinking');
-                  }
+                  }*/
               } else {
                   if(v.ha && v.cxt && v.t) {
                       td.addClass('problem');

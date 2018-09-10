@@ -2835,6 +2835,12 @@ private function instructor_report($max_assessors = 0)
           $map = ee()->input->post('map');
 
           $map_new = empty($map) ? array() : $map;
+          ee()->logger->developer(var_export($map, TRUE));
+
+          if(!$map) {
+              echo '{"message":"no map available"}';
+              return false;
+          }
 
           foreach($map as $k => $row) {
 

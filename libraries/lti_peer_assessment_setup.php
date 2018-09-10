@@ -5,14 +5,14 @@ use LTI\ExtensionHooks\Settings;
 $groups_inserted = FALSE;
 $groups_updated = FALSE;
 
+ee()->logger->developer("IMPORTING: ".var_export($this->parent_object->resource_link_id, TRUE));
+
 if(!isset($form)) {
-	$form = '';
+		$form = '';
 }
 
 $allow_self_assessment_setting = FALSE;
-
 $allow_self_assessment_setting = Settings::get_plugin_setting('lti_peer_assessment', 'allow_self_assessment') == 1;
-
 
 // users without a group.
 $lonely_users = array();
@@ -93,6 +93,8 @@ $create_single_sql = "CREATE TEMPORARY TABLE IF NOT EXISTS `flag_for_delete` AS
     LEFT JOIN `$group_contexts_table` `C` ON `A`.`assessor_member_id`
     WHERE `A`.`resource_link_id` = '" . $this->parent_object->resource_link_id . "' AND `A`.`group_context_id` NOT IN
 (SELECT id FROM `$group_contexts_table`))";
+
+ee()->logger->developer($create_single_sql);
 
 ee()->db->query($create_single_sql);
 
