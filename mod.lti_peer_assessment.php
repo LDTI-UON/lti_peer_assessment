@@ -2834,7 +2834,7 @@ private function instructor_report($max_assessors = 0)
 
           $map = ee()->input->post('map');
 
-          $map_new = $map;
+          $map_new = empty($map) ? array() : $map;
 
           foreach($map as $k => $row) {
 
