@@ -5,7 +5,7 @@ use LTI\ExtensionHooks\Settings;
 $groups_inserted = FALSE;
 $groups_updated = FALSE;
 
-ee()->logger->developer("IMPORTING: ".var_export($this->parent_object->resource_link_id, TRUE));
+//ee()->logger->developer("IMPORTING: ".var_export($this->parent_object->resource_link_id, TRUE));
 
 if(!isset($form)) {
 		$form = '';
@@ -94,7 +94,7 @@ $create_single_sql = "CREATE TEMPORARY TABLE IF NOT EXISTS `flag_for_delete` AS
     WHERE `A`.`resource_link_id` = '" . $this->parent_object->resource_link_id . "' AND `A`.`group_context_id` NOT IN
 (SELECT id FROM `$group_contexts_table`))";
 
-ee()->logger->developer($create_single_sql);
+//ee()->logger->developer($create_single_sql);
 
 ee()->db->query($create_single_sql);
 
