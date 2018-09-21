@@ -1,11 +1,19 @@
 var ltipa = ltipa || {};
 // check if self has assessed
 ltipa.check_yourself =  function() {
-      var val = 0, val2 = 0;
+      var val = 0, val2 = "NaN";
 
-      val = $("form#assessments #self_assess_row textarea").val().length;
-
-      if(val > 0) {
+      val = $("form#assessments #self_assess_row textarea")[0].value.length;
+      val2 = $("form#assessments #self_assess_row .student_assess")[0].value;
+      //console.log(val," ",val2);
+    /*  var _c = true;
+      if(val2 === 0) {
+          confirm("Are you sure you want to award yourself a 0?",
+            function() {
+                _c = false;
+            });
+      }*/
+      if(val > 0 && val2 > 0) {
           $("form#assessments tr input, form#assessments tr button, form#assessments tr textarea").prop("disabled", false);
           $("form#assessments tr[style]").css({"opacity": "inherit"});
       } else {
