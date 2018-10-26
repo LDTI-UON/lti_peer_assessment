@@ -2863,6 +2863,7 @@ private function instructor_report($max_assessors = 0)
 
             $map_new[$k] = $new_row;
           }
+          header('Content-Type: application/json');
           $json = json_encode($map_new);
           echo $json;
 
