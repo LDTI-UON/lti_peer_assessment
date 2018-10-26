@@ -23,7 +23,7 @@ $('.table tr td:nth-of-type(6) > button').each(function(i, v) {
 });
 
 var o = null;
-//console.log(request_obj);
+console.log(request_obj);
 $("table tr button").prop("disabled", true);
 
 $.post(base_url+"?ACT="+acts.lti_peer_assessment.helper_user_has_assessed,
